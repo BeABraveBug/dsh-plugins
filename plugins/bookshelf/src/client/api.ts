@@ -5,6 +5,7 @@ import type {
   AiAskResult,
   AiModelCatalog,
   AiSelection,
+  BookFormat,
   BookNote,
   BrowseResult,
   NoteBookSummary,
@@ -68,6 +69,8 @@ export interface BookshelfApi {
   deleteNoteBook(bookId: string): Promise<{ deleted: boolean }>
   listAiModels(): Promise<AiModelCatalog>
   askAi(question: string, context: string, selection: AiSelection | null): Promise<AiAskResult>
+  getBookAiSelection(bookId: string): Promise<AiSelection | null>
+  saveBookAiSelection(bookId: string, bookPath: string, bookTitle: string, bookFormat: BookFormat, selection: AiSelection | null): Promise<AiSelection | null>
   fileBytes(id: string): Promise<ArrayBuffer>
   fileText(id: string): Promise<string>
 }
@@ -122,6 +125,8 @@ export function createBookshelfApi(): BookshelfApi {
     deleteNoteBook: (bookId) => rpc({ op: 'deleteNoteBook', bookId }),
     listAiModels: () => rpc({ op: 'listAiModels' }),
     askAi: (question, context, selection) => rpc({ op: 'askAi', question, context, selection }),
+    getBookAiSelection: (bookId) => rpc({ op: 'getBookAiSelection', bookId }),
+    saveBookAiSelection: (bookId, bookPath, bookTitle, bookFormat, selection) => rpc({ op: 'saveBookAiSelection', bookId, bookPath, bookTitle, bookFormat, selection }),
     fileBytes: async (id) => (await readFileResponse(id)).arrayBuffer(),
     fileText: async (id) => (await readFileResponse(id)).text(),
   }

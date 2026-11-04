@@ -88,6 +88,7 @@ export interface NoteBook {
   readonly bookFormat: BookFormat
   notes: BookNote[]
   lastEditedNoteId: string | null
+  aiSelection: AiSelection | null
   updatedAt: number
 }
 
@@ -203,6 +204,8 @@ export type RpcRequest =
   | { readonly op: 'deleteNoteBook'; readonly bookId: string }
   | { readonly op: 'listAiModels' }
   | { readonly op: 'askAi'; readonly question: string; readonly context: string; readonly selection?: AiSelection | null }
+  | { readonly op: 'getBookAiSelection'; readonly bookId: string }
+  | { readonly op: 'saveBookAiSelection'; readonly bookId: string; readonly bookPath: string; readonly bookTitle: string; readonly bookFormat: BookFormat; readonly selection: AiSelection | null }
 
 /** Successful RPC envelope. */
 export interface RpcSuccess<T> {

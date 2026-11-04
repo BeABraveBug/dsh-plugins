@@ -10,6 +10,7 @@ import type {
   NoteList,
   ReadingPosition,
   SaveNoteRequest,
+  AiSelection,
 } from '../shared/types.ts'
 
 const NOTES_VERSION = 1
@@ -75,6 +76,8 @@ function parseBook(value: unknown): NoteBook | null {
     if (note === null) return null
     notes.push(note)
   }
+  const aiSelection = value.aiSelection
+  if (aiSelection !== undefined && aiSelection !== null && (!isRecord(aiSelection) || typeof aiSelection.provider !== 'string' || typeof aiSelection.model !== 'string')) return null
   return {
     bookId: value.bookId,
     bookPath: value.bookPath,
@@ -82,6 +85,7 @@ function parseBook(value: unknown): NoteBook | null {
     bookFormat: value.bookFormat as BookFormat,
     notes,
     lastEditedNoteId: value.lastEditedNoteId as string | null,
+    aiSelection: (aiSelection as AiSelection | null | undefined) ?? null,
     updatedAt: value.updatedAt,
   }
 }
@@ -229,6 +233,7 @@ export class NoteStore {
         bookFormat: request.bookFormat,
         notes: [],
         lastEditedNoteId: null,
+        aiSelection: null,
         updatedAt: now,
       }
       if (request.noteId === undefined) {
@@ -262,6 +267,23 @@ export class NoteStore {
       book.updatedAt = now
       draft.books[request.bookId] = book
       return structuredClone(note)
+    })
+  }
+
+  async getAiSelection(bookId: string): Promise<AiSelection | null> {
+    await this.ensureLoaded()
+    return this.data.books[bookId]?.aiSelection ?? null
+  }
+
+  async saveAiSelection(bookId: string, bookPath: string, bookTitle: string, bookFormat: BookFormat, selection: AiSelection | null): Promise<AiSelection | null> {
+    return this.mutate((draft) => {
+      const now = Date.now()
+      const existing = draft.books[bookId]
+      const book = existing ?? { bookId, bookPath, bookTitle, bookFormat, notes: [], lastEditedNoteId: null, aiSelection: null, updatedAt: now }
+      book.aiSelection = selection
+      book.updatedAt = now
+      draft.books[bookId] = book
+      return selection
     })
   }
 

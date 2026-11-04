@@ -126,13 +126,14 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
         const catalog = await api.listAiModels()
         if (cancelled) return
         setModels(catalog)
-        setSelection(catalog.defaultSelection)
+        const saved = await api.getBookAiSelection(book.id)
+        if (!cancelled) setSelection(saved ?? catalog.defaultSelection)
       } catch (cause: unknown) {
         if (!cancelled) setModelError(messageOf(cause))
       }
     })()
     return () => { cancelled = true }
-  }, [api, models, tab])
+  }, [api, book.id, models, tab])
 
   useEffect(() => {
     if (!dirty.current || selectedId === null) return
@@ -271,7 +272,9 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
               value={selection === null ? '' : `${selection.provider}::${selection.model}`}
               onChange={(event) => {
                 const [provider, model] = event.target.value.split('::')
-                setSelection(provider !== undefined && model !== undefined ? { provider, model } : null)
+                const next = provider !== undefined && model !== undefined && provider !== '' ? { provider, model } : null
+                setSelection(next)
+                void api.saveBookAiSelection(book.id, book.path, book.title, book.format, next).catch((cause: unknown) => setAiError(messageOf(cause)))
               }}
               disabled={aiBusy || models === null}
             >

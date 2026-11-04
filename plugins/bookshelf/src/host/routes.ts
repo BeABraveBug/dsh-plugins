@@ -122,6 +122,14 @@ async function dispatch(library: Library, notes: NoteStore, getAi: () => AiServi
       if (ai === null) return failure('bookshelf/ai-unavailable', 'DSH 模型服务不可用。')
       return { ok: true, value: await ai.listModels() }
     }
+    case 'getBookAiSelection': {
+      if (typeof request.bookId !== 'string' || request.bookId === '') return failure('bookshelf/bad-request', '书目 id 无效。')
+      return { ok: true, value: await notes.getAiSelection(request.bookId) }
+    }
+    case 'saveBookAiSelection': {
+      if (typeof request.bookId !== 'string' || request.bookId === '') return failure('bookshelf/bad-request', '书目 id 无效。')
+      return { ok: true, value: await notes.saveAiSelection(request.bookId, request.bookPath, request.bookTitle, request.bookFormat, request.selection) }
+    }
     case 'askAi': {
       const ai = getAi()
       if (ai === null) return failure('bookshelf/ai-unavailable', 'DSH 模型服务不可用。')

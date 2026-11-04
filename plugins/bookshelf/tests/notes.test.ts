@@ -80,3 +80,17 @@ describe('NoteStore', () => {
     expect((await store.list('book-a')).notes).toEqual([])
   })
 })
+
+describe('per-book AI selection', () => {
+  it('persists a selected DSH model without deleting notes', async () => {
+    const root = await workspace()
+    const store = new NoteStore(join(root, 'notes.json'))
+    await store.save(request('book-a', 'note'))
+    await store.saveAiSelection('book-a', '/tmp/book-a.pdf', 'Book A', 'pdf', { provider: 'p', model: 'm' })
+    const reopened = new NoteStore(join(root, 'notes.json'))
+    expect(await reopened.getAiSelection('book-a')).toEqual({ provider: 'p', model: 'm' })
+    expect((await reopened.list('book-a')).notes).toHaveLength(1)
+    await reopened.saveAiSelection('book-a', '/tmp/book-a.pdf', 'Book A', 'pdf', null)
+    expect(await reopened.getAiSelection('book-a')).toBeNull()
+  })
+})

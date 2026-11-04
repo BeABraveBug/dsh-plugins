@@ -57,7 +57,7 @@ DSH 界面侧                         DSH 宿主侧
 | `src/host/library.ts` | JSON 书架记录、原子写入、替换失败备份与恢复、路径归一化、目录第一层扫描、可用性检查、并发串行化 |
 | `src/host/routes.ts` | 通过 `ctx.connection.fetch.register` 注册 `/api/bookshelf/rpc`、`/api/bookshelf/file`、`/api/bookshelf/cover` 与 `/api/bookshelf/pdfjs`，路由自身不重复实现认证 |
 | `src/host/ai.ts` | 读取 DSH 已配置模型目录，通过 `ctx.llm` 收集文本回答；不保存凭据 |
-| `src/host/notes.ts` | 独立 `notes.json` 笔记存储；按书路径关联、原子写入、备份恢复与独立删除 |
+| `src/host/notes.ts` | 独立 `notes.json` 笔记存储；按书路径关联、原子写入、备份恢复与独立删除；每本书的 AI 模型选择与笔记元数据一起保存 |
 | `src/host/covers.ts` | EPUB 内嵌封面解析、TXT/Markdown/PDF 侧车封面查找、macOS PDF Quick Look 缩略图、按文件时间戳缓存；不持久化封面副本 |
 | `src/shared/types.ts` | Host/Client 共享的 JSON 请求、书目、进度与目录浏览类型 |
 | `src/client/api.ts` | 调用已认证 Fetch 路由并区分网络、认证、域错误 |
