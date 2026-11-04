@@ -7,6 +7,7 @@ import { BookshelfError, Library, browseDirectory, statBookFile } from './librar
 import { coverForBook } from './covers.ts'
 import { NoteStore } from './notes.ts'
 import { AiService } from './ai.ts'
+import { ConversationStore } from './conversations.ts'
 import type { RpcRequest, RpcResult } from '../shared/types.ts'
 
 interface FetchRoute {
@@ -60,7 +61,7 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-async function dispatch(library: Library, notes: NoteStore, getAi: () => AiService | null, body: unknown): Promise<RpcResult<unknown>> {
+async function dispatch(library: Library, notes: NoteStore, conversations: ConversationStore, getAi: () => AiService | null, body: unknown): Promise<RpcResult<unknown>> {
   if (!isRecord(body) || typeof body.op !== 'string') return failure('bookshelf/bad-request', '请求格式无效。')
   const request = body as unknown as RpcRequest
   switch (request.op) {
@@ -116,6 +117,18 @@ async function dispatch(library: Library, notes: NoteStore, getAi: () => AiServi
     case 'deleteNoteBook': {
       if (typeof request.bookId !== 'string' || request.bookId === '') return failure('bookshelf/bad-request', '书目 id 无效。')
       return { ok: true, value: await notes.deleteBook(request.bookId) }
+    }
+    case 'listConversation': {
+      if (typeof request.bookId !== 'string' || request.bookId === '') return failure('bookshelf/bad-request', '书目 id 无效。')
+      return { ok: true, value: await conversations.list(request.bookId) }
+    }
+    case 'appendConversation': {
+      if (typeof request.bookId !== 'string' || request.content === undefined) return failure('bookshelf/bad-request', '问答消息无效。')
+      return { ok: true, value: await conversations.append(request.bookId, request.bookPath, request.bookTitle, request.bookFormat, request.role, request.content) }
+    }
+    case 'clearConversation': {
+      if (typeof request.bookId !== 'string' || request.bookId === '') return failure('bookshelf/bad-request', '书目 id 无效。')
+      return { ok: true, value: await conversations.clear(request.bookId) }
     }
     case 'listAiModels': {
       const ai = getAi()
@@ -276,7 +289,7 @@ export async function createPdfAssetHandler(assetRoot: string, request: Request)
   return new Response(bytes as unknown as BodyInit, { status: 200, headers })
 }
 
-export function createRpcHandler(library: Library, notes: NoteStore = new NoteStore(), getAi: () => AiService | null = () => null): (request: Request) => Promise<Response> {
+export function createRpcHandler(library: Library, notes: NoteStore = new NoteStore(), conversations: ConversationStore = new ConversationStore(), getAi: () => AiService | null = () => null): (request: Request) => Promise<Response> {
   return async (request: Request): Promise<Response> => {
     let body: unknown
     try {
@@ -285,7 +298,7 @@ export function createRpcHandler(library: Library, notes: NoteStore = new NoteSt
       return json(failure('bookshelf/bad-request', '请求体不是有效的 JSON。'), 400)
     }
     try {
-      const result = await dispatch(library, notes, getAi, body)
+      const result = await dispatch(library, notes, conversations, getAi, body)
       return json(result)
     } catch (error: unknown) {
       if (error instanceof BookshelfError) return json(failure(error.code, error.message))
@@ -302,6 +315,7 @@ export function registerRoutes(ctx: RouteContext, library: Library): void {
     const register = connection?.fetch?.register
     if (register === undefined) return
     const notes = new NoteStore()
+    const conversations = new ConversationStore()
     let ai: AiService | null = null
     ctx.inject(['llm', 'agentDefaultModel'], (injected: any) => {
       try {
@@ -312,7 +326,7 @@ export function registerRoutes(ctx: RouteContext, library: Library): void {
         ai = null
       }
     })
-    const rpc = createRpcHandler(library, notes, () => ai)
+    const rpc = createRpcHandler(library, notes, conversations, () => ai)
     injected.effect(() => register({
       path: RPC_PATH,
       methods: ['POST'],

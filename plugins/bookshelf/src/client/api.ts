@@ -3,6 +3,7 @@ import type {
   BookRecord,
   BookView,
   AiAskResult,
+  ChatMessageView,
   AiModelCatalog,
   AiSelection,
   BookFormat,
@@ -71,6 +72,9 @@ export interface BookshelfApi {
   askAi(question: string, context: string, selection: AiSelection | null): Promise<AiAskResult>
   getBookAiSelection(bookId: string): Promise<AiSelection | null>
   saveBookAiSelection(bookId: string, bookPath: string, bookTitle: string, bookFormat: BookFormat, selection: AiSelection | null): Promise<AiSelection | null>
+  listConversation(bookId: string): Promise<readonly ChatMessageView[]>
+  appendConversation(bookId: string, bookPath: string, bookTitle: string, bookFormat: BookFormat, role: 'user' | 'assistant', content: string): Promise<ChatMessageView>
+  clearConversation(bookId: string): Promise<{ cleared: boolean }>
   fileBytes(id: string): Promise<ArrayBuffer>
   fileText(id: string): Promise<string>
 }
@@ -127,6 +131,9 @@ export function createBookshelfApi(): BookshelfApi {
     askAi: (question, context, selection) => rpc({ op: 'askAi', question, context, selection }),
     getBookAiSelection: (bookId) => rpc({ op: 'getBookAiSelection', bookId }),
     saveBookAiSelection: (bookId, bookPath, bookTitle, bookFormat, selection) => rpc({ op: 'saveBookAiSelection', bookId, bookPath, bookTitle, bookFormat, selection }),
+    listConversation: (bookId) => rpc({ op: 'listConversation', bookId }),
+    appendConversation: (bookId, bookPath, bookTitle, bookFormat, role, content) => rpc({ op: 'appendConversation', bookId, bookPath, bookTitle, bookFormat, role, content }),
+    clearConversation: (bookId) => rpc({ op: 'clearConversation', bookId }),
     fileBytes: async (id) => (await readFileResponse(id)).arrayBuffer(),
     fileText: async (id) => (await readFileResponse(id)).text(),
   }

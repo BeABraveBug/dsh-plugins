@@ -1,6 +1,6 @@
 # DSH Bookshelf Architecture
 
-状态：已确认的目标架构。阶段 A 的笔记侧栏与独立笔记存储、阶段 B 的文本上下文和截图预览、阶段 C 的最小文本问答已实现；对话历史、按书模型选择和截图持久化尚未实现。现有接入在 DSH `0.2.1-rc.5` 上的验证不代表 AI 接口已验证；兼容范围与未验证项见 [README](../README.md)。行为要求见 [Spec](spec.md)。
+状态：已确认的目标架构。阶段 A 的笔记侧栏与独立笔记存储、阶段 B 的文本上下文和截图预览、阶段 C 的最小文本问答、按书模型选择和对话消息持久化已实现；历史上下文拼接、截图持久化和对话管理仍待实现。现有接入在 DSH `0.2.1-rc.5` 上的验证不代表 AI 接口已验证；兼容范围与未验证项见 [README](../README.md)。行为要求见 [Spec](spec.md)。
 
 ## 整体结构与职责
 
@@ -57,6 +57,7 @@ DSH 界面侧                         DSH 宿主侧
 | `src/host/library.ts` | JSON 书架记录、原子写入、替换失败备份与恢复、路径归一化、目录第一层扫描、可用性检查、并发串行化 |
 | `src/host/routes.ts` | 通过 `ctx.connection.fetch.register` 注册 `/api/bookshelf/rpc`、`/api/bookshelf/file`、`/api/bookshelf/cover` 与 `/api/bookshelf/pdfjs`，路由自身不重复实现认证 |
 | `src/host/ai.ts` | 读取 DSH 已配置模型目录，通过 `ctx.llm` 收集文本回答；不保存凭据 |
+| `src/host/conversations.ts` | 独立 `conversations.json` 问答消息存储；按书关联与清空 |
 | `src/host/notes.ts` | 独立 `notes.json` 笔记存储；按书路径关联、原子写入、备份恢复与独立删除；每本书的 AI 模型选择与笔记元数据一起保存 |
 | `src/host/covers.ts` | EPUB 内嵌封面解析、TXT/Markdown/PDF 侧车封面查找、macOS PDF Quick Look 缩略图、按文件时间戳缓存；不持久化封面副本 |
 | `src/shared/types.ts` | Host/Client 共享的 JSON 请求、书目、进度与目录浏览类型 |

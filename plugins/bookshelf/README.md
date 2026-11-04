@@ -22,6 +22,7 @@
 - EPUB/TXT/Markdown 支持选中文字；无选中时使用当前阅读范围的文本作为上下文预览。
 - 问答标签可列出 DSH 已配置模型，使用默认模型或该书选择的模型提问；回答可加入当前笔记。
 - 每本书的模型选择随笔记数据保存，重新打开继续使用；模型不可用或过期时需重新选择。
+- 问答消息保存到 `$DSH_HOME/bookshelf/conversations.json`，重新打开可恢复；问答标签提供“清空对话”。
 - 笔记按原书路径独立保存，移出书架后仍保留；书架新增“笔记数据”入口，可单独删除。
 - “移出书架”只清除书目记录，原文件保留；重新添加按新书处理。
 
@@ -73,6 +74,7 @@ dsh plugin --profile web add "$PWD/plugins/bookshelf"
 
 - 书目、阅读位置和已读状态：`$DSH_HOME/bookshelf/library.json`（默认 `~/.dsh/bookshelf/library.json`）。
 - 笔记：`$DSH_HOME/bookshelf/notes.json`，独立于书目记录。
+- 问答消息：`$DSH_HOME/bookshelf/conversations.json`，独立于书目记录。
 - 原书文件：保持在用户选择的位置，插件只读访问。
 - 不创建书籍副本，不写回原文件。
 - 封面从原文件或同目录侧车图片读取，不保存到书架记录；PDF 第一页缩略图只存在于浏览器内存。
@@ -133,7 +135,7 @@ pnpm --filter dsh-bookshelf build
 实际验证记录：
 
 - `pnpm --filter dsh-bookshelf typecheck`：通过。
-- `pnpm --filter dsh-bookshelf test`：7 个测试文件、47 个测试通过。
+- `pnpm --filter dsh-bookshelf test`：8 个测试文件、48 个测试通过。
 - `pnpm --filter dsh-bookshelf build`：生成 `lib/index.js` 与 `lib/client.js`。
 - 临时 DSH profile（`0.2.1-rc.5`）中通过 Chromium 验证：书架面板加载、文件/目录添加、重复跳过、缺失与不可访问提示、保留/移出、PDF 翻页与页内位置恢复、EPUB 阅读与位置恢复、TXT/Markdown 进度恢复、Markdown XSS 清理、带路径的拖入、EPUB/TXT/PDF 封面与无封面占位图；代表性中文 PDF 的正文、公式与图片正常显示；PDF 宽度从 100% 调整到 120% 后关闭重开恢复 120%，重置适应宽度后记录为 100%；添加窗口已添加视图可列出路径、标记浏览中的已添加文件，并在二次确认后移出且保留原文件；书架分页在测试书库中验证：前四页各 12 本、最后一页剩余书目，末页下一页禁用，搜索后回到第一页；1672×941 视口下 4 列卡片约 313×210、间距 28px，3 行完整落在内容区内；阅读器笔记侧栏可新建两份笔记、切换并恢复，书架“笔记数据”入口可查看并按书删除；PDF 文本层可选中正文并生成上下文预览，阅读区截图可预览和保留；问答可调用 DSH 默认模型或该书选择的已配置模型，回答可加入当前笔记。
 - 未验证：普通浏览器无路径拖入、Windows、远程部署、超大 EPUB、所有 PDF 的字体覆盖情况、非标准/加密 EPUB 封面、非 `0.2.1-rc.5` 的 DSH。

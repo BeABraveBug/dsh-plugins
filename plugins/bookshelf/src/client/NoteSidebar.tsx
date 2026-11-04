@@ -136,6 +136,14 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
   }, [api, book.id, models, tab])
 
   useEffect(() => {
+    let cancelled = false
+    void api.listConversation(book.id).then((items) => {
+      if (!cancelled) setMessages(items.map((item) => ({ role: item.role, content: item.content })))
+    }).catch((cause: unknown) => { if (!cancelled) setAiError(messageOf(cause)) })
+    return () => { cancelled = true }
+  }, [api, book.id])
+
+  useEffect(() => {
     if (!dirty.current || selectedId === null) return
     if (timer.current !== null) clearTimeout(timer.current)
     timer.current = setTimeout(() => { void persist(selectedId) }, 700)
@@ -228,10 +236,12 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
     const asked = question.trim()
     setMessages((current) => [...current, { role: 'user', content: asked }])
     setQuestion('')
+    void api.appendConversation(book.id, book.path, book.title, book.format, 'user', asked).catch((cause: unknown) => setAiError(messageOf(cause)))
     try {
       const result = await api.askAi(asked, context.excerpt, selection)
       setMessages((current) => [...current, { role: 'assistant', content: result.answer }])
       setSelection(result.selection)
+      void api.appendConversation(book.id, book.path, book.title, book.format, 'assistant', result.answer).catch((cause: unknown) => setAiError(messageOf(cause)))
     } catch (cause: unknown) {
       setAiError(messageOf(cause))
     } finally {
@@ -284,6 +294,7 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
               )))}
             </select>
           </div>
+          {messages.length > 0 && <button type="button" className="bs-link-button" onClick={() => { void api.clearConversation(book.id).then(() => setMessages([])).catch((cause: unknown) => setAiError(messageOf(cause))) }}>{t('clearConversation')}</button>}
           {modelError !== null && <div className="bs-inline-error" role="alert">{modelError}</div>}
           <section className="bs-context-card">
             <div className="bs-context-head">

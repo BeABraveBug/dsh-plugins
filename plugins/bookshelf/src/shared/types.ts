@@ -144,6 +144,13 @@ export interface AiModelCatalog {
   readonly defaultSelection: AiSelection | null
 }
 
+export interface ChatMessageView {
+  readonly id: string
+  readonly role: 'user' | 'assistant'
+  readonly content: string
+  readonly createdAt: number
+}
+
 export interface AiAskRequest {
   readonly question: string
   readonly context: string
@@ -206,6 +213,9 @@ export type RpcRequest =
   | { readonly op: 'askAi'; readonly question: string; readonly context: string; readonly selection?: AiSelection | null }
   | { readonly op: 'getBookAiSelection'; readonly bookId: string }
   | { readonly op: 'saveBookAiSelection'; readonly bookId: string; readonly bookPath: string; readonly bookTitle: string; readonly bookFormat: BookFormat; readonly selection: AiSelection | null }
+  | { readonly op: 'listConversation'; readonly bookId: string }
+  | { readonly op: 'appendConversation'; readonly bookId: string; readonly bookPath: string; readonly bookTitle: string; readonly bookFormat: BookFormat; readonly role: 'user' | 'assistant'; readonly content: string }
+  | { readonly op: 'clearConversation'; readonly bookId: string }
 
 /** Successful RPC envelope. */
 export interface RpcSuccess<T> {
