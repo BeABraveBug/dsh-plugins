@@ -26,6 +26,16 @@ function clampPage(value: number, total: number): number {
   return Math.min(total, Math.max(1, Math.round(value)))
 }
 
+function cleanPdfText(raw: string): string {
+  let text = raw.replace(/\r\n?/g, '\n').replace(/[ \t]+/g, ' ')
+  text = text.replace(/\s*([，。；：！？、])\s*/g, '$1')
+  text = text.replace(/([\u4e00-\u9fff])[ \t]+(?=[\u4e00-\u9fff])/g, '$1')
+  text = text.replace(/([\u4e00-\u9fff])[ \t]+(?=[0-9A-Za-z])/g, '$1')
+  text = text.replace(/([0-9A-Za-z])[ \t]+(?=[\u4e00-\u9fff])/g, '$1')
+  text = text.replace(/(\d)[ \t]*\.[ \t]*(\d)/g, '$1.$2')
+  return text.replace(/\n{3,}/g, '\n\n').trim()
+}
+
 export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, fetchBytes, onProgress, onContext, onScreenshot, t }: PdfReaderProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -108,7 +118,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
   }, [book.id, fetchBytes])
 
   const emitContext = useCallback((text: string) => {
-    const trimmed = text.replace(/\s+/g, ' ').trim()
+    const trimmed = cleanPdfText(text)
     if (trimmed === '') {
       onContextRef.current(null)
       return
@@ -193,14 +203,16 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
         setRendering(false)
         const textContent = await pdfPage.getTextContent()
         if (cancelled) return
-        const text = textContent.items.map((item) => 'str' in item ? item.str : '').join(' ')
+        const text = textContent.items.map((item) => {
+          if (!('str' in item)) return ''
+          return `${item.str}${item.hasEOL ? '\n' : ''}`
+        }).join('')
         pageTextRef.current = text
         const textLayer = textLayerRef.current
         if (textLayer !== null) {
           textLayer.replaceChildren()
-          textLayer.style.width = `${viewport.width}px`
-          textLayer.style.height = `${viewport.height}px`
           textLayer.style.setProperty('--scale-factor', String(viewport.scale))
+          textLayer.style.setProperty('--total-scale-factor', String(viewport.scale))
           try {
             const layer = new pdfjsLib.TextLayer({ textContentSource: textContent, container: textLayer, viewport })
             await layer.render()

@@ -645,7 +645,7 @@
 .bs-zoom-label { min-width: 42px; text-align: center; color: var(--dsw-alias-label-tertiary); font-size: 12px; font-variant-numeric: tabular-nums; }
 .bs-pdf-scroll { flex: 1; min-height: 0; overflow: auto; padding: 16px; background: var(--dsw-alias-bg-layer-2); }
 .bs-pdf-canvas-wrap { display: flex; justify-content: center; min-width: min-content; }
-.bs-pdf-canvas { display: block; border-radius: 2px; box-shadow: var(--dsw-elevation-soft); background: #fff; }
+.bs-pdf-canvas { position: relative; z-index: 0; display: block; border-radius: 2px; box-shadow: var(--dsw-elevation-soft); background: #fff; }
 
 .bs-epub-reader { position: relative; height: 100%; min-height: 0; }
 .bs-epub-host { width: 100%; height: 100%; overflow: auto; }
@@ -882,11 +882,12 @@
 }
 
 .bs-pdf-reader { position: relative; }
-.bs-pdf-canvas-wrap { position: relative; }
+.bs-pdf-canvas-wrap { position: relative; display: block; width: max-content; margin: 0 auto; min-width: 0; }
 .bs-pdf-text-layer {
   position: absolute;
-  left: 0;
-  top: 0;
+  user-select: text;
+  pointer-events: auto;
+  inset: 0;
   overflow: hidden;
   line-height: 1;
   text-size-adjust: none;
