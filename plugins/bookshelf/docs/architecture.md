@@ -1,6 +1,6 @@
 # DSH Bookshelf Architecture
 
-状态：已确认的目标架构。阶段 A 的笔记侧栏与独立笔记存储、阶段 B 的 PDF 文本层和阅读区截图预览已实现；AI 问答、其他格式上下文和截图持久化尚未实现。现有接入在 DSH `0.2.1-rc.5` 上的验证不代表 AI 接口已验证；兼容范围与未验证项见 [README](../README.md)。行为要求见 [Spec](spec.md)。
+状态：已确认的目标架构。阶段 A 的笔记侧栏与独立笔记存储、阶段 B 的 PDF 文本层、各文本格式上下文和阅读区截图预览已实现；AI 问答和截图持久化尚未实现。现有接入在 DSH `0.2.1-rc.5` 上的验证不代表 AI 接口已验证；兼容范围与未验证项见 [README](../README.md)。行为要求见 [Spec](spec.md)。
 
 ## 整体结构与职责
 
@@ -69,8 +69,8 @@ DSH 界面侧                         DSH 宿主侧
 | `src/client/polyfills.ts` | 为旧 Chromium 补齐 PDF.js 使用的 Promise、Uint8Array、Map、Response.bytes 与 Math.sumPrecise 等能力 |
 | `src/client/Reader.tsx` | 阅读会话外壳、格式选择、防抖保存、保存失败提示与已读标记 |
 | `src/client/PdfReader.tsx` | PDF.js 单页渲染、文本层选中、当前页/选区上下文、阅读区截图预览、页码/页内滚动比例、每本书独立宽度/缩放与保存恢复 |
-| `src/client/EpubReader.tsx` | EPUB.js 连续滚动、CFI 保存恢复、禁用脚本内容 |
-| `src/client/TextReader.tsx` | TXT 只读文本与 Markdown 解析/清理、滚动比例保存恢复 |
+| `src/client/EpubReader.tsx` | EPUB.js 连续滚动、CFI 保存恢复、选中文字/当前内容上下文、禁用脚本内容 |
+| `src/client/TextReader.tsx` | TXT 只读文本与 Markdown 解析/清理、滚动比例保存恢复、选中文字/视口上下文 |
 
 独立插件不使用 Typert 生成管线；Host 与 Client 通过 Connection 的认证精确 Fetch 路由通信。路由路径固定为 `/api/bookshelf/rpc`（JSON 操作）、`/api/bookshelf/file`（原文件字节与 Range）、`/api/bookshelf/cover`（封面字节；无封面返回 204）与 `/api/bookshelf/pdfjs`（PDF.js CMaps、标准字体与 WASM 资源）。记录保存到 `$DSH_HOME/bookshelf/library.json`，原文件只读。封面从原文件、EPUB 内嵌资源或侧车图片按需读取；macOS 上 PDF 第一页由 Host 的 Quick Look（`qlmanage`，并发上限 2）生成，其他平台由 PDF.js 的 Range 请求读取；Range 失败时仅对不超过 5 MB 的文件回退整本读取。缩略图只保存在浏览器内存，封面不写入书架记录。PDF worker 作为字符串内联进 Client bundle；构建还把 PDF.js 的 `cmaps/`、`standard_fonts/` 与 `wasm/` 复制到 `lib/pdfjs/`，由认证路由按需提供。阅读器和封面启用 `disableFontFace`，让未内嵌字体使用系统字体回退，并在启动前补齐旧 Chromium 缺少的 Promise、Uint8Array、Map、Response.bytes 与 Math.sumPrecise 等能力。
 

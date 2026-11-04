@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import ePubImport from 'epubjs/lib/index.js'
 import type { Book, Rendition } from 'epubjs'
-import type { BookView, EpubPosition } from '../shared/types.ts'
+import type { BookView, EpubPosition, ReaderTextContext } from '../shared/types.ts'
 import type { Translate } from './i18n.ts'
 
 interface EpubReaderProps {
@@ -9,6 +9,7 @@ interface EpubReaderProps {
   readonly initialPosition: EpubPosition | null
   readonly fetchBytes: (id: string) => Promise<ArrayBuffer>
   readonly onProgress: (position: EpubPosition, percent: number) => void
+  readonly onContext: (context: ReaderTextContext | null) => void
   readonly t: Translate
 }
 
@@ -34,10 +35,12 @@ function epubFactory(): (input: ArrayBuffer) => Book {
   throw new Error('EPUB parser is unavailable')
 }
 
-export function EpubReader({ book, initialPosition, fetchBytes, onProgress, t }: EpubReaderProps) {
+export function EpubReader({ book, initialPosition, fetchBytes, onProgress, onContext, t }: EpubReaderProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const onProgressRef = useRef(onProgress)
+  const onContextRef = useRef(onContext)
   onProgressRef.current = onProgress
+  onContextRef.current = onContext
   const initialRef = useRef(initialPosition)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -48,6 +51,19 @@ export function EpubReader({ book, initialPosition, fetchBytes, onProgress, t }:
     let rendition: Rendition | null = null
     let locationsReady = false
     let lastCfi = initialRef.current?.cfi ?? null
+
+    const emitContext = (source: string, cfi: string, selected: boolean) => {
+      const excerpt = source.replace(/\s+/g, ' ').trim().slice(0, 12000)
+      if (excerpt === '') { onContextRef.current(null); return }
+      onContextRef.current({ format: 'epub', anchor: { kind: 'epub', cfi }, excerpt, truncated: !selected && excerpt.length >= 12000 })
+    }
+
+    const readVisibleText = (): { text: string; cfi: string } | null => {
+      const contents = rendition?.getContents() as unknown as Array<{ document: Document }> | undefined
+      const document = contents?.[0]?.document
+      const text = document?.body?.innerText ?? ''
+      return text.trim() === '' ? null : { text, cfi: lastCfi ?? initialRef.current?.cfi ?? '' }
+    }
 
     const report = (cfi: string, fallback: number | undefined) => {
       if (disposed) return
@@ -85,6 +101,20 @@ export function EpubReader({ book, initialPosition, fetchBytes, onProgress, t }:
         if (disposed) return
         setLoading(false)
         if (lastCfi !== null) report(lastCfi, undefined)
+        const contents = rendition.getContents() as unknown as Array<{ document: Document }>
+        for (const content of contents) {
+          content.document.addEventListener('mouseup', () => {
+            if (disposed) return
+            const selected = content.document.getSelection()?.toString().trim() ?? ''
+            if (selected !== '') emitContext(selected, lastCfi ?? initialRef.current?.cfi ?? '', true)
+            else {
+              const visible = readVisibleText()
+              if (visible !== null) emitContext(visible.text, visible.cfi, false)
+            }
+          })
+        }
+        const visible = readVisibleText()
+        if (visible !== null) emitContext(visible.text, visible.cfi, false)
         // Location generation is intentionally deferred: the text is readable
         // before it finishes, and a complete percentage arrives afterwards.
         void epubBook.locations.generate(1200).then(() => {

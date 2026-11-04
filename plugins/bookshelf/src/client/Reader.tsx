@@ -231,6 +231,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
                 initialPosition={book.progress.position?.kind === 'epub' ? book.progress.position : null}
                 fetchBytes={api.fileBytes}
                 onProgress={onProgress}
+                onContext={setReaderContext}
                 t={t}
               />
             )}
@@ -240,6 +241,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
                 initialPosition={book.progress.position?.kind === 'scroll' ? book.progress.position : null}
                 fetchText={api.fileText}
                 onProgress={onProgress}
+                onContext={setReaderContext}
                 t={t}
               />
             )}
