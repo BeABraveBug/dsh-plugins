@@ -27,5 +27,3 @@ plugins/*/docs/references/
 
 # Package archives
 *.tgz
-doc/references/
-plugins/*/doc/references/

@@ -58,13 +58,34 @@ export function EpubReader({ book, initialPosition, fetchBytes, onProgress, onCo
       onContextRef.current({ format: 'epub', anchor: { kind: 'epub', cfi }, excerpt, truncated: truncated || (!selected && excerpt.length >= 12000) })
     }
 
-    const readVisibleText = (percent = 0): { text: string; cfi: string } | null => {
+    const readVisibleText = (): { text: string; cfi: string } | null => {
+      const contents = rendition?.getContents() as unknown as Array<{ document: Document; sectionIndex?: number }> | undefined
+      if (contents === undefined || contents.length === 0) return null
+      let sectionIndex: number | undefined
+      try { sectionIndex = lastCfi === null ? undefined : epubBook?.spine.get(lastCfi)?.index } catch { sectionIndex = undefined }
+      const current = sectionIndex === undefined ? contents[contents.length - 1] : contents.find((entry) => entry.sectionIndex === sectionIndex) ?? contents[contents.length - 1]
+      const full = current?.document?.body?.innerText ?? ''
+      return full.trim() === '' ? null : { text: full.slice(0, 12000), cfi: lastCfi ?? initialRef.current?.cfi ?? '' }
+    }
+
+    const boundDocuments = new WeakSet<Document>()
+    const bindSelection = () => {
       const contents = rendition?.getContents() as unknown as Array<{ document: Document }> | undefined
-      const document = contents?.[0]?.document
-      const full = document?.body?.innerText ?? ''
-      if (full.trim() === '') return null
-      const start = Math.floor((Math.min(100, Math.max(0, percent)) / 100) * Math.max(0, full.length - 12000))
-      return { text: full.slice(start, start + 12000), cfi: lastCfi ?? initialRef.current?.cfi ?? '' }
+      for (const content of contents ?? []) {
+        const document = content.document
+        if (document === undefined || boundDocuments.has(document)) continue
+        boundDocuments.add(document)
+        document.addEventListener('mouseup', () => {
+          if (disposed) return
+          const selected = document.getSelection()?.toString().trim() ?? ''
+          if (selected !== '') {
+            emitContext(selected, lastCfi ?? initialRef.current?.cfi ?? '', true)
+          } else {
+            const visible = readVisibleText()
+            if (visible !== null) emitContext(visible.text, visible.cfi, false)
+          }
+        })
+      }
     }
 
     const report = (cfi: string, fallback: number | undefined) => {
@@ -76,8 +97,9 @@ export function EpubReader({ book, initialPosition, fetchBytes, onProgress, onCo
       }
       const value = Math.min(100, Math.max(0, Number.isFinite(percent) ? percent : 0))
       onProgressRef.current({ kind: 'epub', cfi }, Math.round(value * 10) / 10)
-      const visible = readVisibleText(value)
-      if (visible !== null) emitContext(visible.text, cfi, false, value > 0)
+      const visible = readVisibleText()
+      if (visible !== null) emitContext(visible.text, cfi, false)
+      bindSelection()
     }
 
     void (async () => {
@@ -105,18 +127,7 @@ export function EpubReader({ book, initialPosition, fetchBytes, onProgress, onCo
         if (disposed) return
         setLoading(false)
         if (lastCfi !== null) report(lastCfi, undefined)
-        const contents = rendition.getContents() as unknown as Array<{ document: Document }>
-        for (const content of contents) {
-          content.document.addEventListener('mouseup', () => {
-            if (disposed) return
-            const selected = content.document.getSelection()?.toString().trim() ?? ''
-            if (selected !== '') emitContext(selected, lastCfi ?? initialRef.current?.cfi ?? '', true)
-            else {
-              const visible = readVisibleText()
-              if (visible !== null) emitContext(visible.text, visible.cfi, false)
-            }
-          })
-        }
+        bindSelection()
         const visible = readVisibleText()
         if (visible !== null) emitContext(visible.text, visible.cfi, false)
         // Location generation is intentionally deferred: the text is readable
