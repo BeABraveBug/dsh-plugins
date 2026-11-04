@@ -94,3 +94,15 @@ describe('per-book AI selection', () => {
     expect(await reopened.getAiSelection('book-a')).toBeNull()
   })
 })
+
+describe('note deletion preserves book settings', () => {
+  it('keeps the selected model when the last note is deleted', async () => {
+    const root = await workspace()
+    const store = new NoteStore(join(root, 'notes.json'))
+    const note = await store.save(request('book-a', 'only note'))
+    await store.saveAiSelection('book-a', '/tmp/book-a.pdf', 'Book A', 'pdf', { provider: 'p', model: 'm' })
+    await store.remove('book-a', note.id)
+    expect((await store.list('book-a')).notes).toEqual([])
+    expect(await store.getAiSelection('book-a')).toEqual({ provider: 'p', model: 'm' })
+  })
+})

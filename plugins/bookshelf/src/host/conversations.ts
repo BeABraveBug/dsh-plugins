@@ -57,14 +57,14 @@ export class ConversationStore {
     this.loaded = true
   }
 
-  private async write(): Promise<void> {
+  private async write(data: ConversationFile = this.data): Promise<void> {
     const directory = dirname(this.filePath)
     await mkdir(directory, { recursive: true })
     const temporary = `${this.filePath}.tmp-${process.pid}-${randomUUID()}`
     try {
       const handle = await open(temporary, 'w', 0o600)
       try {
-        await handle.writeFile(`${JSON.stringify(this.data, null, 2)}\n`, 'utf8')
+        await handle.writeFile(`${JSON.stringify(data, null, 2)}\n`, 'utf8')
         await handle.sync()
       } finally { await handle.close() }
       await rename(temporary, this.filePath)
@@ -74,11 +74,13 @@ export class ConversationStore {
     }
   }
 
-  private mutate<T>(operation: () => T): Promise<T> {
+  private mutate<T>(operation: (draft: ConversationFile) => T): Promise<T> {
     const run = this.chain.then(async () => {
       await this.ensureLoaded()
-      const value = operation()
-      await this.write()
+      const draft = structuredClone(this.data)
+      const value = operation(draft)
+      await this.write(draft)
+      this.data = draft
       return value
     })
     this.chain = run.then(() => undefined, () => undefined)
@@ -92,22 +94,22 @@ export class ConversationStore {
 
   async append(bookId: string, bookPath: string, bookTitle: string, bookFormat: BookFormat, role: 'user' | 'assistant', content: string): Promise<ChatMessage> {
     if (content.trim() === '') throw new BookshelfError('bookshelf/bad-request', '消息不能为空。')
-    return this.mutate(() => {
+    return this.mutate((draft) => {
       const now = Date.now()
-      const existing = this.data.books[bookId]
+      const existing = draft.books[bookId]
       const book = existing ?? { bookId, bookPath, bookTitle, bookFormat, messages: [], updatedAt: now }
       const message: ChatMessage = { id: randomUUID(), role, content, createdAt: now }
       book.messages.push(message)
       book.updatedAt = now
-      this.data.books[bookId] = book
+      draft.books[bookId] = book
       return message
     })
   }
 
   async clear(bookId: string): Promise<{ cleared: boolean }> {
-    return this.mutate(() => {
-      if (this.data.books[bookId] === undefined) return { cleared: false }
-      delete this.data.books[bookId]
+    return this.mutate((draft) => {
+      if (draft.books[bookId] === undefined) return { cleared: false }
+      delete draft.books[bookId]
       return { cleared: true }
     })
   }

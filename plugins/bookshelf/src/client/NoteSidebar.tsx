@@ -48,7 +48,10 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
   const [aiBusy, setAiBusy] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
   const [modelError, setModelError] = useState<string | null>(null)
+  const savedSelectionRef = useRef<AiSelection | null | undefined>(undefined)
   const dirty = useRef(false)
+  const revision = useRef(0)
+  const saveChain = useRef<Promise<BookNote | null>>(Promise.resolve(null))
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const selectedRef = useRef<BookNote | null>(null)
   const titleRef = useRef('')
@@ -57,30 +60,38 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
   markdownRef.current = markdown
   selectedRef.current = notes.find((note) => note.id === selectedId) ?? null
 
-  const persist = useCallback(async (noteId: string): Promise<BookNote | null> => {
-    if (!dirty.current) return selectedRef.current
-    setSaveState('saving')
-    setError(null)
-    try {
-      const saved = await api.saveNote({
-        bookId: book.id,
-        bookPath: book.path,
-        bookTitle: book.title,
-        bookFormat: book.format,
-        noteId,
-        title: titleRef.current,
-        markdown: markdownRef.current,
-        anchor: selectedRef.current?.anchor ?? book.progress.position,
-      })
-      setNotes((current) => current.map((note) => note.id === saved.id ? saved : note))
-      dirty.current = false
-      setSaveState('saved')
-      return saved
-    } catch (cause: unknown) {
-      setSaveState('error')
-      setError(messageOf(cause))
-      return null
+  const persist = useCallback((noteId: string): Promise<BookNote | null> => {
+    if (!dirty.current) return Promise.resolve(selectedRef.current)
+    const targetRevision = revision.current
+    const titleToSave = titleRef.current
+    const markdownToSave = markdownRef.current
+    const run = async (): Promise<BookNote | null> => {
+      setSaveState('saving')
+      setError(null)
+      try {
+        const saved = await api.saveNote({
+          bookId: book.id,
+          bookPath: book.path,
+          bookTitle: book.title,
+          bookFormat: book.format,
+          noteId,
+          title: titleToSave,
+          markdown: markdownToSave,
+          anchor: selectedRef.current?.anchor ?? book.progress.position,
+        })
+        setNotes((current) => current.map((note) => note.id === saved.id ? saved : note))
+        if (revision.current === targetRevision) dirty.current = false
+        setSaveState(revision.current === targetRevision ? 'saved' : 'idle')
+        return saved
+      } catch (cause: unknown) {
+        setSaveState('error')
+        setError(messageOf(cause))
+        return null
+      }
     }
+    const next = saveChain.current.then(run, run)
+    saveChain.current = next
+    return next
   }, [api, book])
 
   const flush = useCallback(async (): Promise<boolean> => {
@@ -119,6 +130,16 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
   }, [api, book.id])
 
   useEffect(() => {
+    let cancelled = false
+    void api.getBookAiSelection(book.id).then((saved) => {
+      if (cancelled) return
+      savedSelectionRef.current = saved
+      if (saved !== null) setSelection(saved)
+    }).catch((cause: unknown) => { if (!cancelled) setModelError(messageOf(cause)) })
+    return () => { cancelled = true }
+  }, [api, book.id])
+
+  useEffect(() => {
     if (tab !== 'qa' || models !== null) return
     let cancelled = false
     void (async () => {
@@ -126,8 +147,8 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
         const catalog = await api.listAiModels()
         if (cancelled) return
         setModels(catalog)
-        const saved = await api.getBookAiSelection(book.id)
-        if (!cancelled) setSelection(saved ?? catalog.defaultSelection)
+        const saved = savedSelectionRef.current
+        setSelection(saved !== undefined && saved !== null ? saved : catalog.defaultSelection)
       } catch (cause: unknown) {
         if (!cancelled) setModelError(messageOf(cause))
       }
@@ -221,6 +242,7 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
   }
 
   const changed = () => {
+    revision.current += 1
     dirty.current = true
     setSaveState('idle')
   }

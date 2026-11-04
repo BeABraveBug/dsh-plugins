@@ -52,17 +52,19 @@ export function EpubReader({ book, initialPosition, fetchBytes, onProgress, onCo
     let locationsReady = false
     let lastCfi = initialRef.current?.cfi ?? null
 
-    const emitContext = (source: string, cfi: string, selected: boolean) => {
+    const emitContext = (source: string, cfi: string, selected: boolean, truncated = false) => {
       const excerpt = source.replace(/\s+/g, ' ').trim().slice(0, 12000)
       if (excerpt === '') { onContextRef.current(null); return }
-      onContextRef.current({ format: 'epub', anchor: { kind: 'epub', cfi }, excerpt, truncated: !selected && excerpt.length >= 12000 })
+      onContextRef.current({ format: 'epub', anchor: { kind: 'epub', cfi }, excerpt, truncated: truncated || (!selected && excerpt.length >= 12000) })
     }
 
-    const readVisibleText = (): { text: string; cfi: string } | null => {
+    const readVisibleText = (percent = 0): { text: string; cfi: string } | null => {
       const contents = rendition?.getContents() as unknown as Array<{ document: Document }> | undefined
       const document = contents?.[0]?.document
-      const text = document?.body?.innerText ?? ''
-      return text.trim() === '' ? null : { text, cfi: lastCfi ?? initialRef.current?.cfi ?? '' }
+      const full = document?.body?.innerText ?? ''
+      if (full.trim() === '') return null
+      const start = Math.floor((Math.min(100, Math.max(0, percent)) / 100) * Math.max(0, full.length - 12000))
+      return { text: full.slice(start, start + 12000), cfi: lastCfi ?? initialRef.current?.cfi ?? '' }
     }
 
     const report = (cfi: string, fallback: number | undefined) => {
@@ -74,6 +76,8 @@ export function EpubReader({ book, initialPosition, fetchBytes, onProgress, onCo
       }
       const value = Math.min(100, Math.max(0, Number.isFinite(percent) ? percent : 0))
       onProgressRef.current({ kind: 'epub', cfi }, Math.round(value * 10) / 10)
+      const visible = readVisibleText(value)
+      if (visible !== null) emitContext(visible.text, cfi, false, value > 0)
     }
 
     void (async () => {

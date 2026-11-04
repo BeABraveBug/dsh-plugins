@@ -68,6 +68,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
   const [rendering, setRendering] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [capture, setCapture] = useState<ReaderScreenshot | null>(null)
+  const [containerWidth, setContainerWidth] = useState(0)
 
   pageRef.current = page
   totalRef.current = total
@@ -172,6 +173,21 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
   }, [])
 
   useEffect(() => {
+    const scroller = scrollRef.current
+    if (scroller === null) return
+    const observer = new ResizeObserver(() => {
+      const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight)
+      if (max > 0) {
+        restoreRef.current = scroller.scrollTop / max
+        suppressRef.current = true
+      }
+      setContainerWidth(scroller.clientWidth)
+    })
+    observer.observe(scroller)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
     const doc = docRef.current
     if (doc === null || loading) return
     let cancelled = false
@@ -241,7 +257,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
       renderTaskRef.current?.cancel()
       renderTaskRef.current = null
     }
-  }, [emitContext, loading, page, report, zoom])
+  }, [containerWidth, emitContext, loading, page, report, zoom])
 
   useEffect(() => { setPageInput(String(page)) }, [page])
 

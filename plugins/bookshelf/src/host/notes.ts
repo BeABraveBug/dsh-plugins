@@ -296,7 +296,7 @@ export class NoteStore {
       book.notes = book.notes.filter((note) => note.id !== noteId)
       if (book.lastEditedNoteId === noteId) book.lastEditedNoteId = book.notes[0]?.id ?? null
       book.updatedAt = Date.now()
-      if (book.notes.length === 0) delete draft.books[bookId]
+      if (book.notes.length === 0 && book.aiSelection === null) delete draft.books[bookId]
       return { deleted: true }
     })
   }
