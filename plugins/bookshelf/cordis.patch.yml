@@ -1,0 +1,5 @@
+# Loads the Host half; the dsh.client manifest in package.json makes the Web app
+# mount ./lib/client.js as the browser half.
+- insert:
+    - id: bookshelf
+      name: dsh-bookshelf

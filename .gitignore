@@ -1,0 +1,25 @@
+.DS_Store
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+*.log
+.env
+.env.*
+!.env.example
+*.swp
+*.swo
+*~
+
+.tmp/
+
+.pnpm-store/
+plugins/*/lib/
+
+# Internal collaboration records stay local and are not published.
+docs/comments/
+plugins/*/docs/comments/
+
+# Package archives
+*.tgz

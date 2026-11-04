@@ -1,0 +1,74 @@
+{
+  "name": "dsh-bookshelf",
+  "version": "0.1.0",
+  "description": "Local ebook shelf and reader for DeepSeek Harness.",
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/index.d.ts",
+    "lib/client.js",
+    "lib/pdfjs/**",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "README.md",
+    "icon.svg"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ],
+      "platform": "web"
+    }
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.1-rc.2 <0.3.0"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.31",
+    "dompurify": "^3.2.6",
+    "epubjs": "^0.3.93",
+    "jszip": "^3.10.2",
+    "marked": "^15.0.12",
+    "pdfjs-dist": "^5.4.54",
+    "react": "^18.3.1",
+    "tsdown": "^0.23.1",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "check": "pnpm run typecheck && pnpm run test && pnpm run build"
+  },
+  "icon": "icon.svg"
+}
