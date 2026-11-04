@@ -1,6 +1,6 @@
 # DSH Bookshelf Architecture
 
-状态：已确认的目标架构。阶段 A 的笔记侧栏与独立笔记存储已实现；AI 问答、PDF 文本层和截图附件尚未实现。现有接入在 DSH `0.2.1-rc.5` 上的验证不代表 AI 接口已验证；兼容范围与未验证项见 [README](../README.md)。行为要求见 [Spec](spec.md)。
+状态：已确认的目标架构。阶段 A 的笔记侧栏与独立笔记存储、阶段 B 的 PDF 文本层和阅读区截图预览已实现；AI 问答、其他格式上下文和截图持久化尚未实现。现有接入在 DSH `0.2.1-rc.5` 上的验证不代表 AI 接口已验证；兼容范围与未验证项见 [README](../README.md)。行为要求见 [Spec](spec.md)。
 
 ## 整体结构与职责
 
@@ -68,7 +68,7 @@ DSH 界面侧                         DSH 宿主侧
 | `src/client/pdf.ts` | 阅读器和封面共用同一个 PDF.js worker 与兼容垫片 |
 | `src/client/polyfills.ts` | 为旧 Chromium 补齐 PDF.js 使用的 Promise、Uint8Array、Map、Response.bytes 与 Math.sumPrecise 等能力 |
 | `src/client/Reader.tsx` | 阅读会话外壳、格式选择、防抖保存、保存失败提示与已读标记 |
-| `src/client/PdfReader.tsx` | PDF.js 单页渲染、页码/页内滚动比例、每本书独立宽度/缩放与保存恢复 |
+| `src/client/PdfReader.tsx` | PDF.js 单页渲染、文本层选中、当前页/选区上下文、阅读区截图预览、页码/页内滚动比例、每本书独立宽度/缩放与保存恢复 |
 | `src/client/EpubReader.tsx` | EPUB.js 连续滚动、CFI 保存恢复、禁用脚本内容 |
 | `src/client/TextReader.tsx` | TXT 只读文本与 Markdown 解析/清理、滚动比例保存恢复 |
 

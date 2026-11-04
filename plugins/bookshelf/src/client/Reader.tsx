@@ -1,6 +1,6 @@
 import { Component, useCallback, useEffect, useRef, useState } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
-import type { BookRecord, BookView, PdfPosition, ReadingPosition } from '../shared/types.ts'
+import type { BookRecord, BookView, PdfPosition, ReaderScreenshot, ReaderTextContext, ReadingPosition } from '../shared/types.ts'
 import type { BookshelfApi } from './api.ts'
 import type { Translate } from './i18n.ts'
 import { ArrowLeftIcon, CheckIcon } from './icons.tsx'
@@ -116,6 +116,8 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
   const [notesOpen, setNotesOpen] = useState(true)
   const [notesWidth, setNotesWidth] = useState(360)
   const noteFlushRef = useRef<(() => Promise<boolean>) | null>(null)
+  const [readerContext, setReaderContext] = useState<ReaderTextContext | null>(null)
+  const [screenshot, setScreenshot] = useState<ReaderScreenshot | null>(null)
 
   const close = useCallback(async () => {
     const saved = await saver.flush()
@@ -218,6 +220,8 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
                 onWidthChange={onWidthChange}
                 fetchBytes={api.fileBytes}
                 onProgress={onProgress}
+                onContext={setReaderContext}
+                onScreenshot={setScreenshot}
                 t={t}
               />
             )}
@@ -245,7 +249,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
           <>
             <div className="bs-note-resizer" onPointerDown={startResize} role="separator" aria-orientation="vertical" aria-label={t('resizeNotes')} />
             <div className="bs-note-pane" style={{ width: notesWidth }}>
-              <NoteSidebar book={book} api={api} t={t} onClose={() => setNotesOpen(false)} flushRef={noteFlushRef} />
+              <NoteSidebar book={book} api={api} t={t} context={readerContext} screenshot={screenshot} onClearScreenshot={() => setScreenshot(null)} onClose={() => setNotesOpen(false)} flushRef={noteFlushRef} />
             </div>
           </>
         )}

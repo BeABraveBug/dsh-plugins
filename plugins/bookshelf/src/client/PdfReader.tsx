@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
 import { ensurePdfWorker, pdfjsLib } from './pdf.ts'
-import type { BookView, PdfPosition } from '../shared/types.ts'
+import type { BookView, PdfPosition, ReaderScreenshot, ReaderTextContext } from '../shared/types.ts'
 import type { Translate } from './i18n.ts'
 import { pdfjsAssetUrl } from './api.ts'
 import { ChevronLeftIcon, ChevronRightIcon } from './icons.tsx'
@@ -13,6 +13,8 @@ interface PdfReaderProps {
   readonly onWidthChange: (width: number) => void
   readonly fetchBytes: (id: string) => Promise<ArrayBuffer>
   readonly onProgress: (position: PdfPosition, percent: number) => void
+  readonly onContext: (context: ReaderTextContext | null) => void
+  readonly onScreenshot: (screenshot: ReaderScreenshot | null) => void
   readonly t: Translate
 }
 
@@ -24,9 +26,10 @@ function clampPage(value: number, total: number): number {
   return Math.min(total, Math.max(1, Math.round(value)))
 }
 
-export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, fetchBytes, onProgress, t }: PdfReaderProps) {
+export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, fetchBytes, onProgress, onContext, onScreenshot, t }: PdfReaderProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const textLayerRef = useRef<HTMLDivElement>(null)
   const docRef = useRef<PDFDocumentProxy | null>(null)
   const renderTaskRef = useRef<RenderTask | null>(null)
   const initialRef = useRef(initialPosition)
@@ -36,8 +39,11 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
   const totalRef = useRef(initialPosition?.total ?? 1)
   const onProgressRef = useRef(onProgress)
   const onWidthChangeRef = useRef(onWidthChange)
+  const onContextRef = useRef(onContext)
+  const pageTextRef = useRef('')
   onProgressRef.current = onProgress
   onWidthChangeRef.current = onWidthChange
+  onContextRef.current = onContext
 
   const [page, setPage] = useState(initialPosition?.page ?? 1)
   const [total, setTotal] = useState(initialPosition?.total ?? 0)
@@ -51,6 +57,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
   const [loading, setLoading] = useState(true)
   const [rendering, setRendering] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [capture, setCapture] = useState<ReaderScreenshot | null>(null)
 
   pageRef.current = page
   totalRef.current = total
@@ -100,6 +107,53 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
     }
   }, [book.id, fetchBytes])
 
+  const emitContext = useCallback((text: string) => {
+    const trimmed = text.replace(/\s+/g, ' ').trim()
+    if (trimmed === '') {
+      onContextRef.current(null)
+      return
+    }
+    const scroller = scrollRef.current
+    const max = scroller === null ? 0 : Math.max(0, scroller.scrollHeight - scroller.clientHeight)
+    const offset = scroller === null || max === 0 ? 0 : Math.min(1, Math.max(0, scroller.scrollTop / max))
+    const excerpt = trimmed.slice(0, 12000)
+    onContextRef.current({
+      format: 'pdf',
+      anchor: { kind: 'pdf', page: pageRef.current, total: Math.max(1, totalRef.current), offset },
+      excerpt,
+      truncated: trimmed.length > excerpt.length,
+    })
+  }, [])
+
+  const handleSelection = useCallback(() => {
+    const selected = window.getSelection()?.toString().trim() ?? ''
+    emitContext(selected === '' ? pageTextRef.current : selected)
+  }, [emitContext])
+
+  const captureRegion = useCallback(() => {
+    const canvas = canvasRef.current
+    const scroller = scrollRef.current
+    if (canvas === null || scroller === null) return
+    const canvasRect = canvas.getBoundingClientRect()
+    const scrollRect = scroller.getBoundingClientRect()
+    const left = Math.max(0, scrollRect.left - canvasRect.left)
+    const top = Math.max(0, scrollRect.top - canvasRect.top)
+    const right = Math.min(canvasRect.width, scrollRect.right - canvasRect.left)
+    const bottom = Math.min(canvasRect.height, scrollRect.bottom - canvasRect.top)
+    if (right <= left || bottom <= top) return
+    const scaleX = canvas.width / canvasRect.width
+    const scaleY = canvas.height / canvasRect.height
+    const cropWidth = Math.max(1, Math.round((right - left) * scaleX))
+    const cropHeight = Math.max(1, Math.round((bottom - top) * scaleY))
+    const out = document.createElement('canvas')
+    out.width = cropWidth
+    out.height = cropHeight
+    const context = out.getContext('2d')
+    if (context === null) return
+    context.drawImage(canvas, left * scaleX, top * scaleY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight)
+    setCapture({ dataUrl: out.toDataURL('image/png'), width: cropWidth, height: cropHeight })
+  }, [])
+
   const report = useCallback((pageNumber: number, ratio: number) => {
     const totalPages = Math.max(1, totalRef.current)
     const clamped = Math.min(1, Math.max(0, ratio))
@@ -112,6 +166,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
     if (doc === null || loading) return
     let cancelled = false
     setRendering(true)
+    onContextRef.current(null)
     ;(async () => {
       try {
         const pdfPage = await doc.getPage(clampPage(page, doc.numPages))
@@ -136,6 +191,24 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
         await task.promise
         if (cancelled) return
         setRendering(false)
+        const textContent = await pdfPage.getTextContent()
+        if (cancelled) return
+        const text = textContent.items.map((item) => 'str' in item ? item.str : '').join(' ')
+        pageTextRef.current = text
+        const textLayer = textLayerRef.current
+        if (textLayer !== null) {
+          textLayer.replaceChildren()
+          textLayer.style.width = `${viewport.width}px`
+          textLayer.style.height = `${viewport.height}px`
+          textLayer.style.setProperty('--scale-factor', String(viewport.scale))
+          try {
+            const layer = new pdfjsLib.TextLayer({ textContentSource: textContent, container: textLayer, viewport })
+            await layer.render()
+          } catch {
+            // Text selection is optional; the canvas still renders.
+          }
+        }
+        emitContext(text)
         const scroller = scrollRef.current
         if (scroller !== null) {
           const offset = restoreRef.current
@@ -156,7 +229,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
       renderTaskRef.current?.cancel()
       renderTaskRef.current = null
     }
-  }, [loading, page, report, zoom])
+  }, [emitContext, loading, page, report, zoom])
 
   useEffect(() => { setPageInput(String(page)) }, [page])
 
@@ -212,13 +285,27 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
         <span className="bs-zoom-label">{Math.round(zoom * 100)}%</span>
         <button type="button" className="bs-button" onClick={() => changeZoom(zoom + 0.1)} aria-label={t('zoomIn')}>+</button>
         <button type="button" className="bs-button" onClick={() => changeZoom(1)}>{t('resetZoom')}</button>
+        <button type="button" className="bs-button" onClick={captureRegion}>{t('captureRegion')}</button>
         {rendering && <span className="bs-muted">{t('loading')}</span>}
       </div>
       <div ref={scrollRef} className="bs-pdf-scroll" onScroll={handleScroll}>
         <div className="bs-pdf-canvas-wrap">
           <canvas ref={canvasRef} className="bs-pdf-canvas" />
+          <div ref={textLayerRef} className="bs-pdf-text-layer" onMouseUp={handleSelection} />
         </div>
       </div>
+      {capture !== null && (
+        <div className="bs-capture-overlay" role="dialog" aria-label={t('capturePreview')}>
+          <div className="bs-capture-card">
+            <strong>{t('capturePreview')}</strong>
+            <img src={capture.dataUrl} alt={t('capturePreview')} />
+            <div className="bs-actions">
+              <button type="button" className="bs-button" onClick={() => setCapture(null)}>{t('discardScreenshot')}</button>
+              <button type="button" className="bs-button bs-button-primary" onClick={() => { onScreenshot(capture); setCapture(null) }}>{t('useScreenshot')}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

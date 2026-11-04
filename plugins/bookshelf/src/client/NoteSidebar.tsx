@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { MutableRefObject } from 'react'
-import type { BookNote, BookView } from '../shared/types.ts'
+import type { BookNote, BookView, ReaderScreenshot, ReaderTextContext } from '../shared/types.ts'
 import type { BookshelfApi } from './api.ts'
 import type { Translate } from './i18n.ts'
 import { CheckIcon, PlusIcon, TrashIcon } from './icons.tsx'
@@ -13,6 +13,9 @@ interface NoteSidebarProps {
   readonly book: BookView
   readonly api: BookshelfApi
   readonly t: Translate
+  readonly context: ReaderTextContext | null
+  readonly screenshot: ReaderScreenshot | null
+  readonly onClearScreenshot: () => void
   readonly onClose: () => void
   readonly flushRef?: MutableRefObject<(() => Promise<boolean>) | null>
 }
@@ -26,7 +29,7 @@ function noteDate(timestamp: number): string {
 }
 
 /** Side panel for per-book Markdown notes. AI Q&A is added in a later phase. */
-export function NoteSidebar({ book, api, t, onClose, flushRef }: NoteSidebarProps) {
+export function NoteSidebar({ book, api, t, context, screenshot, onClearScreenshot, onClose, flushRef }: NoteSidebarProps) {
   const [tab, setTab] = useState<SidebarTab>('notes')
   const [notes, setNotes] = useState<BookNote[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -208,7 +211,34 @@ export function NoteSidebar({ book, api, t, onClose, flushRef }: NoteSidebarProp
         <button type="button" className="bs-icon-button" onClick={() => { void flush().then((saved) => { if (saved) onClose() }) }} aria-label={t('close')}>×</button>
       </header>
 
-      {tab === 'qa' && <div className="bs-note-placeholder"><p>{t('qaComingSoon')}</p></div>}
+      {tab === 'qa' && (
+        <div className="bs-note-qa">
+          <p className="bs-muted">{t('qaComingSoon')}</p>
+          <section className="bs-context-card">
+            <div className="bs-context-head">
+              <strong>{t('contextTitle')}</strong>
+              {context !== null && <span>{context.anchor.kind === 'pdf' ? `PDF · ${context.anchor.page}` : ''}</span>}
+            </div>
+            {context === null
+              ? <p className="bs-muted">{t('contextEmpty')}</p>
+              : (
+                <>
+                  <p className="bs-context-excerpt">{context.excerpt.slice(0, 600)}</p>
+                  {context.truncated && <span className="bs-muted">{t('contextTruncated')}</span>}
+                </>
+              )}
+          </section>
+          {screenshot !== null && (
+            <section className="bs-context-card">
+              <div className="bs-context-head">
+                <strong>{t('capturePreview')}</strong>
+                <button type="button" className="bs-link-button" onClick={onClearScreenshot}>{t('clearContext')}</button>
+              </div>
+              <img className="bs-context-image" src={screenshot.dataUrl} alt={t('capturePreview')} />
+            </section>
+          )}
+        </div>
+      )}
 
       {tab === 'notes' && (
         <div className="bs-note-body">

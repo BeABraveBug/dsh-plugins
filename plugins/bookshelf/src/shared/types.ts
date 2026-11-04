@@ -36,6 +36,22 @@ export interface BookProgress {
   updatedAt: number | null
 }
 
+
+/** Text context captured from the current reader view for notes and Q&A. */
+export interface ReaderTextContext {
+  readonly format: BookFormat
+  readonly anchor: ReadingPosition
+  readonly excerpt: string
+  readonly truncated: boolean
+}
+
+/** A user-triggered screenshot of the reading area. */
+export interface ReaderScreenshot {
+  readonly dataUrl: string
+  readonly width: number
+  readonly height: number
+}
+
 /** One persisted bookshelf record. This record never contains a copy of the book. */
 export interface BookRecord {
   readonly id: string
