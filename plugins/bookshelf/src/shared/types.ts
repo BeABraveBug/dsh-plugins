@@ -119,6 +119,41 @@ export interface SaveNoteRequest {
   readonly anchor: ReadingPosition | null
 }
 
+
+/** Public model metadata returned by the bookshelf AI bridge. */
+export interface AiModelInfo {
+  readonly id: string
+  readonly name: string
+  readonly supportsImages: boolean
+}
+
+export interface AiProviderInfo {
+  readonly id: string
+  readonly name: string
+  readonly models: readonly AiModelInfo[]
+}
+
+export interface AiSelection {
+  readonly provider: string
+  readonly model: string
+}
+
+export interface AiModelCatalog {
+  readonly providers: readonly AiProviderInfo[]
+  readonly defaultSelection: AiSelection | null
+}
+
+export interface AiAskRequest {
+  readonly question: string
+  readonly context: string
+  readonly selection?: AiSelection | null
+}
+
+export interface AiAskResult {
+  readonly answer: string
+  readonly selection: AiSelection
+}
+
 /** A book plus the latest availability check. Availability is never persisted. */
 export interface BookView extends BookRecord {
   readonly availability: Availability
@@ -166,6 +201,8 @@ export type RpcRequest =
   | { readonly op: 'deleteNote'; readonly bookId: string; readonly noteId: string }
   | { readonly op: 'listNoteBooks' }
   | { readonly op: 'deleteNoteBook'; readonly bookId: string }
+  | { readonly op: 'listAiModels' }
+  | { readonly op: 'askAi'; readonly question: string; readonly context: string; readonly selection?: AiSelection | null }
 
 /** Successful RPC envelope. */
 export interface RpcSuccess<T> {

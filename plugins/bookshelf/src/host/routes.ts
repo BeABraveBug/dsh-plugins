@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { BookshelfError, Library, browseDirectory, statBookFile } from './library.ts'
 import { coverForBook } from './covers.ts'
 import { NoteStore } from './notes.ts'
+import { AiService } from './ai.ts'
 import type { RpcRequest, RpcResult } from '../shared/types.ts'
 
 interface FetchRoute {
@@ -59,7 +60,7 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-async function dispatch(library: Library, notes: NoteStore, body: unknown): Promise<RpcResult<unknown>> {
+async function dispatch(library: Library, notes: NoteStore, getAi: () => AiService | null, body: unknown): Promise<RpcResult<unknown>> {
   if (!isRecord(body) || typeof body.op !== 'string') return failure('bookshelf/bad-request', '请求格式无效。')
   const request = body as unknown as RpcRequest
   switch (request.op) {
@@ -115,6 +116,17 @@ async function dispatch(library: Library, notes: NoteStore, body: unknown): Prom
     case 'deleteNoteBook': {
       if (typeof request.bookId !== 'string' || request.bookId === '') return failure('bookshelf/bad-request', '书目 id 无效。')
       return { ok: true, value: await notes.deleteBook(request.bookId) }
+    }
+    case 'listAiModels': {
+      const ai = getAi()
+      if (ai === null) return failure('bookshelf/ai-unavailable', 'DSH 模型服务不可用。')
+      return { ok: true, value: await ai.listModels() }
+    }
+    case 'askAi': {
+      const ai = getAi()
+      if (ai === null) return failure('bookshelf/ai-unavailable', 'DSH 模型服务不可用。')
+      if (typeof request.question !== 'string' || typeof request.context !== 'string') return failure('bookshelf/bad-request', '问答内容无效。')
+      return { ok: true, value: await ai.ask(request.question, request.context, request.selection ?? null) }
     }
     default:
       return failure('bookshelf/unknown-op', '未知的书架操作。')
@@ -256,7 +268,7 @@ export async function createPdfAssetHandler(assetRoot: string, request: Request)
   return new Response(bytes as unknown as BodyInit, { status: 200, headers })
 }
 
-export function createRpcHandler(library: Library, notes: NoteStore = new NoteStore()): (request: Request) => Promise<Response> {
+export function createRpcHandler(library: Library, notes: NoteStore = new NoteStore(), getAi: () => AiService | null = () => null): (request: Request) => Promise<Response> {
   return async (request: Request): Promise<Response> => {
     let body: unknown
     try {
@@ -265,7 +277,7 @@ export function createRpcHandler(library: Library, notes: NoteStore = new NoteSt
       return json(failure('bookshelf/bad-request', '请求体不是有效的 JSON。'), 400)
     }
     try {
-      const result = await dispatch(library, notes, body)
+      const result = await dispatch(library, notes, getAi, body)
       return json(result)
     } catch (error: unknown) {
       if (error instanceof BookshelfError) return json(failure(error.code, error.message))
@@ -282,7 +294,17 @@ export function registerRoutes(ctx: RouteContext, library: Library): void {
     const register = connection?.fetch?.register
     if (register === undefined) return
     const notes = new NoteStore()
-    const rpc = createRpcHandler(library, notes)
+    let ai: AiService | null = null
+    ctx.inject(['llm', 'agentDefaultModel'], (injected: any) => {
+      try {
+        const llm = injected.get('llm')
+        const defaultModel = injected.get('agentDefaultModel')
+        if (llm !== undefined && defaultModel !== undefined) ai = new AiService(llm, defaultModel)
+      } catch {
+        ai = null
+      }
+    })
+    const rpc = createRpcHandler(library, notes, () => ai)
     injected.effect(() => register({
       path: RPC_PATH,
       methods: ['POST'],

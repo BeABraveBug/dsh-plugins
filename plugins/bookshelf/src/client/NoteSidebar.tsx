@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { MutableRefObject } from 'react'
-import type { BookNote, BookView, ReaderScreenshot, ReaderTextContext } from '../shared/types.ts'
+import type { AiModelCatalog, AiSelection, BookNote, BookView, ReaderScreenshot, ReaderTextContext } from '../shared/types.ts'
 import type { BookshelfApi } from './api.ts'
 import type { Translate } from './i18n.ts'
 import { CheckIcon, PlusIcon, TrashIcon } from './icons.tsx'
@@ -41,6 +41,13 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
   const [error, setError] = useState<string | null>(null)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [models, setModels] = useState<AiModelCatalog | null>(null)
+  const [selection, setSelection] = useState<AiSelection | null>(null)
+  const [question, setQuestion] = useState('')
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
+  const [aiBusy, setAiBusy] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
+  const [modelError, setModelError] = useState<string | null>(null)
   const dirty = useRef(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const selectedRef = useRef<BookNote | null>(null)
@@ -110,6 +117,22 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
     })()
     return () => { cancelled = true }
   }, [api, book.id])
+
+  useEffect(() => {
+    if (tab !== 'qa' || models !== null) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const catalog = await api.listAiModels()
+        if (cancelled) return
+        setModels(catalog)
+        setSelection(catalog.defaultSelection)
+      } catch (cause: unknown) {
+        if (!cancelled) setModelError(messageOf(cause))
+      }
+    })()
+    return () => { cancelled = true }
+  }, [api, models, tab])
 
   useEffect(() => {
     if (!dirty.current || selectedId === null) return
@@ -193,6 +216,35 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
     setSaveState('idle')
   }
 
+  const ask = async () => {
+    if (aiBusy || question.trim() === '') return
+    if (context === null) {
+      setAiError(t('contextRequired'))
+      return
+    }
+    setAiBusy(true)
+    setAiError(null)
+    const asked = question.trim()
+    setMessages((current) => [...current, { role: 'user', content: asked }])
+    setQuestion('')
+    try {
+      const result = await api.askAi(asked, context.excerpt, selection)
+      setMessages((current) => [...current, { role: 'assistant', content: result.answer }])
+      setSelection(result.selection)
+    } catch (cause: unknown) {
+      setAiError(messageOf(cause))
+    } finally {
+      setAiBusy(false)
+    }
+  }
+
+  const addAnswer = (answer: string) => {
+    if (selectedId === null) return
+    setMarkdown((current) => `${current}${current.trim() === '' ? '' : '\n\n'}${answer}`)
+    dirty.current = true
+    setSaveState('idle')
+  }
+
   useEffect(() => {
     if (flushRef !== undefined) flushRef.current = flush
     return () => { if (flushRef !== undefined) flushRef.current = null }
@@ -213,7 +265,23 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
 
       {tab === 'qa' && (
         <div className="bs-note-qa">
-          <p className="bs-muted">{t('qaComingSoon')}</p>
+          <div className="bs-qa-model">
+            <label>{t('model')}</label>
+            <select
+              value={selection === null ? '' : `${selection.provider}::${selection.model}`}
+              onChange={(event) => {
+                const [provider, model] = event.target.value.split('::')
+                setSelection(provider !== undefined && model !== undefined ? { provider, model } : null)
+              }}
+              disabled={aiBusy || models === null}
+            >
+              <option value="">{t('defaultModel')}</option>
+              {models?.providers.flatMap((provider) => provider.models.map((model) => (
+                <option key={`${provider.id}::${model.id}`} value={`${provider.id}::${model.id}`}>{provider.name} · {model.name}</option>
+              )))}
+            </select>
+          </div>
+          {modelError !== null && <div className="bs-inline-error" role="alert">{modelError}</div>}
           <section className="bs-context-card">
             <div className="bs-context-head">
               <strong>{t('contextTitle')}</strong>
@@ -235,8 +303,22 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
                 <button type="button" className="bs-link-button" onClick={onClearScreenshot}>{t('clearContext')}</button>
               </div>
               <img className="bs-context-image" src={screenshot.dataUrl} alt={t('capturePreview')} />
+              <span className="bs-muted">{t('screenshotTextOnlyPending')}</span>
             </section>
           )}
+          <div className="bs-qa-messages">
+            {messages.map((message, index) => (
+              <div key={index} className={`bs-qa-message bs-qa-${message.role}`}>
+                <div>{message.content}</div>
+                {message.role === 'assistant' && selectedId !== null && <button type="button" className="bs-link-button" onClick={() => addAnswer(message.content)}>{t('addAnswerToNote')}</button>}
+              </div>
+            ))}
+          </div>
+          {aiError !== null && <div className="bs-inline-error" role="alert">{aiError}</div>}
+          <div className="bs-qa-compose">
+            <textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={t('askPlaceholder')} aria-label={t('askPlaceholder')} />
+            <button type="button" className="bs-button bs-button-primary" onClick={() => { void ask() }} disabled={aiBusy || question.trim() === '' || context === null}>{aiBusy ? t('sending') : t('ask')}</button>
+          </div>
         </div>
       )}
 
