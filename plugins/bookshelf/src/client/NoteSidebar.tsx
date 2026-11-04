@@ -16,6 +16,7 @@ interface NoteSidebarProps {
   readonly context: ReaderTextContext | null
   readonly screenshot: ReaderScreenshot | null
   readonly onClearScreenshot: () => void
+  readonly onClearContext: () => void
   readonly onClose: () => void
   readonly flushRef?: MutableRefObject<(() => Promise<boolean>) | null>
 }
@@ -29,13 +30,14 @@ function noteDate(timestamp: number): string {
 }
 
 /** Side panel for per-book Markdown notes. AI Q&A is added in a later phase. */
-export function NoteSidebar({ book, api, t, context, screenshot, onClearScreenshot, onClose, flushRef }: NoteSidebarProps) {
+export function NoteSidebar({ book, api, t, context, screenshot, onClearScreenshot, onClearContext, onClose, flushRef }: NoteSidebarProps) {
   const [tab, setTab] = useState<SidebarTab>('notes')
   const [notes, setNotes] = useState<BookNote[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [title, setTitle] = useState('')
   const [markdown, setMarkdown] = useState('')
   const [preview, setPreview] = useState(false)
+  const [contextOpen, setContextOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -100,8 +102,12 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
       timer.current = null
     }
     if (selectedId === null) return true
-    const saved = await persist(selectedId)
-    return saved !== null
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      if (!dirty.current) return true
+      const saved = await persist(selectedId)
+      if (saved === null) return false
+    }
+    return !dirty.current
   }, [persist, selectedId])
 
   useEffect(() => {
@@ -274,8 +280,7 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
   const addAnswer = (answer: string) => {
     if (selectedId === null) return
     setMarkdown((current) => `${current}${current.trim() === '' ? '' : '\n\n'}${answer}`)
-    dirty.current = true
-    setSaveState('idle')
+    changed()
   }
 
   useEffect(() => {
@@ -320,14 +325,15 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
           {modelError !== null && <div className="bs-inline-error" role="alert">{modelError}</div>}
           <section className="bs-context-card">
             <div className="bs-context-head">
-              <strong>{t('contextTitle')}</strong>
+              <button type="button" className="bs-context-toggle" onClick={() => setContextOpen((current) => !current)}>{t('contextTitle')}</button>
               {context !== null && <span>{context.anchor.kind === 'pdf' ? `PDF · ${context.anchor.page}` : ''}</span>}
+              {context !== null && <button type="button" className="bs-link-button" onClick={onClearContext}>{t('clearContext')}</button>}
             </div>
             {context === null
               ? <p className="bs-muted">{t('contextEmpty')}</p>
-              : (
+              : contextOpen && (
                 <>
-                  <p className="bs-context-excerpt">{context.excerpt.slice(0, 600)}</p>
+                  <p className="bs-context-excerpt">{context.excerpt}</p>
                   {context.truncated && <span className="bs-muted">{t('contextTruncated')}</span>}
                 </>
               )}
@@ -353,13 +359,20 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
           {aiError !== null && <div className="bs-inline-error" role="alert">{aiError}</div>}
           <div className="bs-qa-compose">
             <textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={t('askPlaceholder')} aria-label={t('askPlaceholder')} />
-            <button type="button" className="bs-button bs-button-primary" onClick={() => { void ask() }} disabled={aiBusy || question.trim() === '' || context === null}>{aiBusy ? t('sending') : t('ask')}</button>
+            <button type="button" className="bs-qa-send" aria-label={aiBusy ? t('sending') : t('ask')} onClick={() => { void ask() }} disabled={aiBusy || question.trim() === '' || context === null}>{aiBusy ? '…' : '↑'}</button>
           </div>
         </div>
       )}
 
       {tab === 'notes' && (
         <div className="bs-note-body">
+          <div className="bs-note-picker-row">
+            <select className="bs-note-picker" value={selectedId ?? ''} onChange={(event) => { const note = notes.find((entry) => entry.id === event.target.value); if (note !== undefined) void selectNote(note) }} aria-label={t('notes')} disabled={busy || notes.length === 0}>
+              {notes.length === 0 && <option value="">{t('noNotes')}</option>}
+              {notes.map((note) => <option key={note.id} value={note.id}>{note.title || t('untitledNote')}</option>)}
+            </select>
+            <span className="bs-note-count">{notes.length}</span>
+          </div>
           <div className="bs-note-toolbar">
             <button type="button" className="bs-button bs-button-primary" onClick={() => { void createNote() }} disabled={busy || loading}><PlusIcon size={14} /> {t('newNote')}</button>
             {selected !== null && (
@@ -371,9 +384,6 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
               </>
             )}
             {saveState === 'error' && <button type="button" className="bs-button" onClick={() => { void flush() }}>{t('saveRetry')}</button>}
-            <span className={`bs-note-save bs-note-save-${saveState}`}>
-              {saveState === 'saving' ? t('saveSaving') : saveState === 'saved' ? t('saveSaved') : saveState === 'error' ? t('saveFailed') : ''}
-            </span>
           </div>
           {error !== null && <div className="bs-inline-error" role="alert">{error}</div>}
           {loading && <div className="bs-empty">{t('loading')}</div>}
@@ -398,6 +408,10 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
               )}
             </>
           )}
+          <footer className={`bs-note-footer bs-note-save-${saveState}`}>
+            <span>{saveState === 'saving' ? t('saveSaving') : saveState === 'saved' ? t('saveSaved') : saveState === 'error' ? t('saveFailed') : ''}</span>
+            <span>Markdown</span>
+          </footer>
         </div>
       )}
     </aside>

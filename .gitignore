@@ -21,5 +21,11 @@ plugins/*/lib/
 docs/comments/
 plugins/*/docs/comments/
 
+# Local design references and demos.
+docs/references/
+plugins/*/docs/references/
+
 # Package archives
 *.tgz
+doc/references/
+plugins/*/doc/references/

@@ -173,6 +173,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
   }, [])
 
   useEffect(() => {
+    if (loading) return
     const scroller = scrollRef.current
     if (scroller === null) return
     const observer = new ResizeObserver(() => {
@@ -185,7 +186,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
     })
     observer.observe(scroller)
     return () => observer.disconnect()
-  }, [])
+  }, [loading])
 
   useEffect(() => {
     const doc = docRef.current

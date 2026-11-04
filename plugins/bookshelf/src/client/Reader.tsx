@@ -251,7 +251,8 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
           <>
             <div className="bs-note-resizer" onPointerDown={startResize} role="separator" aria-orientation="vertical" aria-label={t('resizeNotes')} />
             <div className="bs-note-pane" style={{ width: notesWidth }}>
-              <NoteSidebar book={book} api={api} t={t} context={readerContext} screenshot={screenshot} onClearScreenshot={() => setScreenshot(null)} onClose={() => setNotesOpen(false)} flushRef={noteFlushRef} />
+              <NoteSidebar book={book} api={api} t={t} context={readerContext} screenshot={screenshot} onClearScreenshot={() => setScreenshot(null)}
+                onClearContext={() => setReaderContext(null)} onClose={() => setNotesOpen(false)} flushRef={noteFlushRef} />
             </div>
           </>
         )}

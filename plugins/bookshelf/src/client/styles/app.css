@@ -949,3 +949,26 @@
 .bs-qa-assistant .bs-link-button { margin-top: 6px; }
 .bs-qa-compose { display: flex; flex-direction: column; gap: 6px; }
 .bs-qa-compose textarea { min-height: 74px; resize: vertical; border-radius: 6px; border: 0.5px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); font: inherit; font-size: 12px; padding: 8px; }
+
+.bs-note-picker-row { display: flex; align-items: center; gap: 8px; }
+.bs-note-picker { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--dsw-alias-label-primary); font: inherit; font-size: 13px; font-weight: 500; padding: 4px 0; }
+.bs-note-count { color: var(--dsw-alias-label-tertiary); font-size: 11px; }
+.bs-note-list { display: none; }
+.bs-note-toolbar { order: 2; }
+.bs-note-picker-row { order: 1; }
+.bs-note-editor { order: 3; }
+.bs-note-footer { order: 4; border-top: 0.5px solid var(--dsw-alias-border-l1); padding-top: 8px; display: flex; justify-content: space-between; color: var(--dsw-alias-label-tertiary); font-size: 11px; }
+.bs-note-footer.bs-note-save-saved { color: var(--dsw-alias-state-success-primary); }
+.bs-note-footer.bs-note-save-error { color: var(--dsw-alias-state-error-primary); }
+.bs-note-body { gap: 10px; }
+.bs-note-title-input { border: 0; background: transparent; font-size: 20px; font-weight: 500; line-height: 1.5; padding: 2px 0 4px; }
+.bs-note-title-input:focus { outline: none; border-bottom: 0.5px solid var(--dsw-alias-border-l3); }
+.bs-note-textarea { border: 0; background: transparent; padding: 4px 0; line-height: 1.85; min-height: 320px; }
+.bs-note-textarea:focus { outline: none; }
+.bs-note-preview { padding: 4px 0; }
+.bs-context-toggle { border: 0; background: transparent; color: var(--dsw-alias-label-primary); font: inherit; font-size: 12px; font-weight: 500; padding: 0; cursor: pointer; }
+.bs-qa-send { flex: none; width: 32px; height: 32px; border: 0; border-radius: 8px; background: var(--dsw-alias-button-primary-fill); color: var(--dsw-alias-label-primary-foreground); font-size: 18px; line-height: 1; cursor: pointer; }
+.bs-qa-send:disabled { opacity: 0.45; cursor: not-allowed; }
+.bs-qa-compose { flex-direction: column; }
+.bs-note-toolbar .bs-button { background: transparent; border-color: transparent; color: var(--dsw-alias-label-secondary); }
+.bs-note-toolbar .bs-button:hover { background: var(--dsw-alias-bg-layer-3); }
