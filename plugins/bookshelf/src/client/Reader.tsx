@@ -7,6 +7,7 @@ import { ArrowLeftIcon, CheckIcon } from './icons.tsx'
 import { PdfReader } from './PdfReader.tsx'
 import { EpubReader } from './EpubReader.tsx'
 import { TextReader } from './TextReader.tsx'
+import { NoteSidebar } from './NoteSidebar.tsx'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -112,10 +113,14 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
   const saver = useProgressSaver(book.id, api, onSaved)
   const [readBusy, setReadBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [notesOpen, setNotesOpen] = useState(true)
+  const [notesWidth, setNotesWidth] = useState(360)
+  const noteFlushRef = useRef<(() => Promise<boolean>) | null>(null)
 
   const close = useCallback(async () => {
     const saved = await saver.flush()
-    if (saved) onClose()
+    const notesSaved = noteFlushRef.current === null ? true : await noteFlushRef.current()
+    if (saved && notesSaved) onClose()
   }, [onClose, saver])
 
   const toggleRead = async () => {
@@ -130,6 +135,29 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
       setReadBusy(false)
     }
   }
+
+  const toggleNotes = useCallback(async () => {
+    if (notesOpen && noteFlushRef.current !== null) {
+      const saved = await noteFlushRef.current()
+      if (!saved) return
+    }
+    setNotesOpen((current) => !current)
+  }, [notesOpen])
+
+  const startResize = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    const startX = event.clientX
+    const startWidth = notesWidth
+    const move = (moveEvent: PointerEvent) => {
+      setNotesWidth(Math.min(640, Math.max(280, startWidth + startX - moveEvent.clientX)))
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }, [notesWidth])
 
   const onProgress = useCallback((position: ReadingPosition, percent: number) => {
     saver.report(position, percent)
@@ -170,6 +198,9 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
                   : ''}
           </span>
           {saver.state === 'error' && <button type="button" className="bs-button" onClick={() => { void saver.flush() }}>{t('saveRetry')}</button>}
+          <button type="button" className={`bs-button ${notesOpen ? 'bs-button-primary' : ''}`} onClick={() => { void toggleNotes() }}>
+            {t('notes')}
+          </button>
           <button type="button" className={`bs-button ${book.markedRead ? 'bs-button-primary' : ''}`} onClick={() => { void toggleRead() }} disabled={readBusy}>
             {book.markedRead ? <><CheckIcon size={14} /> {t('unmarkRead')}</> : t('markRead')}
           </button>
@@ -177,37 +208,47 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
       </header>
       {actionError !== null && <div className="bs-inline-error" role="alert">{actionError}</div>}
       <div className="bs-reader-body">
-        <ReaderBoundary key={book.id} fallback={fallback}>
-          {book.format === 'pdf' && (
-            <PdfReader
-              book={book}
-              initialPosition={book.progress.position?.kind === 'pdf' ? book.progress.position : null}
-              initialWidth={book.readerWidth}
-              onWidthChange={onWidthChange}
-              fetchBytes={api.fileBytes}
-              onProgress={onProgress}
-              t={t}
-            />
-          )}
-          {book.format === 'epub' && (
-            <EpubReader
-              book={book}
-              initialPosition={book.progress.position?.kind === 'epub' ? book.progress.position : null}
-              fetchBytes={api.fileBytes}
-              onProgress={onProgress}
-              t={t}
-            />
-          )}
-          {(book.format === 'txt' || book.format === 'markdown') && (
-            <TextReader
-              book={book}
-              initialPosition={book.progress.position?.kind === 'scroll' ? book.progress.position : null}
-              fetchText={api.fileText}
-              onProgress={onProgress}
-              t={t}
-            />
-          )}
-        </ReaderBoundary>
+        <div className="bs-reader-main">
+          <ReaderBoundary key={book.id} fallback={fallback}>
+            {book.format === 'pdf' && (
+              <PdfReader
+                book={book}
+                initialPosition={book.progress.position?.kind === 'pdf' ? book.progress.position : null}
+                initialWidth={book.readerWidth}
+                onWidthChange={onWidthChange}
+                fetchBytes={api.fileBytes}
+                onProgress={onProgress}
+                t={t}
+              />
+            )}
+            {book.format === 'epub' && (
+              <EpubReader
+                book={book}
+                initialPosition={book.progress.position?.kind === 'epub' ? book.progress.position : null}
+                fetchBytes={api.fileBytes}
+                onProgress={onProgress}
+                t={t}
+              />
+            )}
+            {(book.format === 'txt' || book.format === 'markdown') && (
+              <TextReader
+                book={book}
+                initialPosition={book.progress.position?.kind === 'scroll' ? book.progress.position : null}
+                fetchText={api.fileText}
+                onProgress={onProgress}
+                t={t}
+              />
+            )}
+          </ReaderBoundary>
+        </div>
+        {notesOpen && (
+          <>
+            <div className="bs-note-resizer" onPointerDown={startResize} role="separator" aria-orientation="vertical" aria-label={t('resizeNotes')} />
+            <div className="bs-note-pane" style={{ width: notesWidth }}>
+              <NoteSidebar book={book} api={api} t={t} onClose={() => setNotesOpen(false)} flushRef={noteFlushRef} />
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

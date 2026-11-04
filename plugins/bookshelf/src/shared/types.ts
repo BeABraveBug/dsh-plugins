@@ -52,6 +52,57 @@ export interface BookRecord {
   markedRead: boolean
 }
 
+
+/** One Markdown note attached to a book. Notes survive removing the shelf entry. */
+export interface BookNote {
+  readonly id: string
+  title: string
+  markdown: string
+  readonly createdAt: number
+  updatedAt: number
+  /** Reading position captured when the note was created. */
+  readonly anchor: ReadingPosition | null
+}
+
+/** Note collection stored under one normalized book path. */
+export interface NoteBook {
+  readonly bookId: string
+  readonly bookPath: string
+  readonly bookTitle: string
+  readonly bookFormat: BookFormat
+  notes: BookNote[]
+  lastEditedNoteId: string | null
+  updatedAt: number
+}
+
+/** Notes returned for the currently open book. */
+export interface NoteList {
+  notes: BookNote[]
+  readonly lastEditedNoteId: string | null
+}
+
+/** Summary used by the shelf-level notes data manager. */
+export interface NoteBookSummary {
+  readonly bookId: string
+  readonly bookPath: string
+  readonly bookTitle: string
+  readonly bookFormat: BookFormat
+  readonly noteCount: number
+  readonly updatedAt: number
+}
+
+/** Create or update one note. Omit noteId to create. */
+export interface SaveNoteRequest {
+  readonly bookId: string
+  readonly bookPath: string
+  readonly bookTitle: string
+  readonly bookFormat: BookFormat
+  readonly noteId?: string
+  readonly title: string
+  readonly markdown: string
+  readonly anchor: ReadingPosition | null
+}
+
 /** A book plus the latest availability check. Availability is never persisted. */
 export interface BookView extends BookRecord {
   readonly availability: Availability
@@ -94,6 +145,11 @@ export type RpcRequest =
   | { readonly op: 'saveReaderWidth'; readonly id: string; readonly width: number }
   | { readonly op: 'setRead'; readonly id: string; readonly markedRead: boolean }
   | { readonly op: 'remove'; readonly id: string }
+  | { readonly op: 'listNotes'; readonly bookId: string }
+  | { readonly op: 'saveNote'; readonly note: SaveNoteRequest }
+  | { readonly op: 'deleteNote'; readonly bookId: string; readonly noteId: string }
+  | { readonly op: 'listNoteBooks' }
+  | { readonly op: 'deleteNoteBook'; readonly bookId: string }
 
 /** Successful RPC envelope. */
 export interface RpcSuccess<T> {

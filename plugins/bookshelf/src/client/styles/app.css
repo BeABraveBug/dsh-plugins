@@ -833,3 +833,50 @@
     padding-right: 14px;
   }
 }
+
+.bs-reader-body { display: flex; flex-direction: row; }
+.bs-reader-main { flex: 1; min-width: 0; height: 100%; overflow: hidden; }
+.bs-note-pane { flex: none; height: 100%; min-height: 0; border-left: 0.5px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); }
+.bs-note-resizer { flex: none; width: 5px; cursor: col-resize; background: transparent; }
+.bs-note-resizer:hover { background: var(--dsw-alias-border-l2); }
+
+.bs-note-sidebar { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.bs-note-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 0.5px solid var(--dsw-alias-border-l1); }
+.bs-note-tabs { flex: 1; display: flex; gap: 4px; }
+.bs-note-tab { border: 0; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 12px; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+.bs-note-tab.is-active { background: var(--dsw-alias-bg-layer-3); color: var(--dsw-alias-label-primary); font-weight: 500; }
+.bs-note-body { flex: 1; min-height: 0; overflow: auto; padding: 10px 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+.bs-note-toolbar { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.bs-note-toolbar .bs-button { font-size: 12px; min-height: 28px; padding: 0 8px; }
+.bs-note-save { margin-left: auto; color: var(--dsw-alias-label-tertiary); font-size: 11px; }
+.bs-note-save-saved { color: var(--dsw-alias-state-success-primary); }
+.bs-note-save-error { color: var(--dsw-alias-state-error-primary); }
+.bs-note-list { display: flex; flex-direction: column; gap: 3px; max-height: 160px; overflow: auto; }
+.bs-note-list-item { display: flex; align-items: center; gap: 8px; border: 0; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-primary); font: inherit; font-size: 12px; padding: 6px 8px; text-align: left; cursor: pointer; }
+.bs-note-list-item:hover, .bs-note-list-item.is-active { background: var(--dsw-alias-bg-layer-3); }
+.bs-note-list-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bs-note-list-date { flex: none; color: var(--dsw-alias-label-tertiary); font-size: 10px; }
+.bs-note-editor { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 260px; }
+.bs-note-title-input { width: 100%; box-sizing: border-box; border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 6px; background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); font: inherit; font-size: 13px; padding: 7px 9px; }
+.bs-note-textarea { flex: 1; min-height: 260px; resize: vertical; width: 100%; box-sizing: border-box; border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 6px; background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-primary); font: inherit; font-size: 13px; line-height: 1.6; padding: 9px; }
+.bs-note-preview { flex: 1; min-height: 260px; overflow: auto; padding: 4px 2px; }
+.bs-note-placeholder { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; color: var(--dsw-alias-label-tertiary); font-size: 12px; text-align: center; }
+.bs-notes-manager { max-width: 760px; }
+.bs-note-data-list { max-height: 460px; overflow: auto; padding: 0 20px; }
+.bs-note-data-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 0.5px solid var(--dsw-alias-border-l1); }
+.bs-note-data-row:last-child { border-bottom: 0; }
+.bs-note-data-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bs-note-data-text strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bs-note-data-text span { color: var(--dsw-alias-label-tertiary); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bs-note-data-text small { color: var(--dsw-alias-label-secondary); font-size: 11px; }
+
+@media (max-width: 900px) {
+  .bs-note-pane { position: absolute; right: 0; top: 0; bottom: 0; z-index: 4; max-width: 92%; box-shadow: var(--dsw-elevation-soft); }
+  .bs-reader-body { position: relative; }
+  .bs-note-resizer { display: none; }
+}
+@media (max-width: 640px) {
+  .bs-note-pane { max-width: 100%; }
+  .bs-note-data-list { padding-left: 12px; padding-right: 12px; }
+  .bs-note-data-row { align-items: flex-start; flex-direction: column; }
+}

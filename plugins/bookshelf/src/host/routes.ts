@@ -5,6 +5,7 @@ import { Readable } from 'node:stream'
 import { fileURLToPath } from 'node:url'
 import { BookshelfError, Library, browseDirectory, statBookFile } from './library.ts'
 import { coverForBook } from './covers.ts'
+import { NoteStore } from './notes.ts'
 import type { RpcRequest, RpcResult } from '../shared/types.ts'
 
 interface FetchRoute {
@@ -58,7 +59,7 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-async function dispatch(library: Library, body: unknown): Promise<RpcResult<unknown>> {
+async function dispatch(library: Library, notes: NoteStore, body: unknown): Promise<RpcResult<unknown>> {
   if (!isRecord(body) || typeof body.op !== 'string') return failure('bookshelf/bad-request', '请求格式无效。')
   const request = body as unknown as RpcRequest
   switch (request.op) {
@@ -98,6 +99,22 @@ async function dispatch(library: Library, body: unknown): Promise<RpcResult<unkn
     case 'remove': {
       if (typeof request.id !== 'string' || request.id === '') return failure('bookshelf/bad-request', '书目 id 无效。')
       return { ok: true, value: await library.remove(request.id) }
+    }
+    case 'listNotes': {
+      if (typeof request.bookId !== 'string' || request.bookId === '') return failure('bookshelf/bad-request', '书目 id 无效。')
+      return { ok: true, value: await notes.list(request.bookId) }
+    }
+    case 'saveNote':
+      return { ok: true, value: await notes.save(request.note) }
+    case 'deleteNote': {
+      if (typeof request.bookId !== 'string' || typeof request.noteId !== 'string') return failure('bookshelf/bad-request', '笔记 id 无效。')
+      return { ok: true, value: await notes.remove(request.bookId, request.noteId) }
+    }
+    case 'listNoteBooks':
+      return { ok: true, value: await notes.listBooks() }
+    case 'deleteNoteBook': {
+      if (typeof request.bookId !== 'string' || request.bookId === '') return failure('bookshelf/bad-request', '书目 id 无效。')
+      return { ok: true, value: await notes.deleteBook(request.bookId) }
     }
     default:
       return failure('bookshelf/unknown-op', '未知的书架操作。')
@@ -239,7 +256,7 @@ export async function createPdfAssetHandler(assetRoot: string, request: Request)
   return new Response(bytes as unknown as BodyInit, { status: 200, headers })
 }
 
-export function createRpcHandler(library: Library): (request: Request) => Promise<Response> {
+export function createRpcHandler(library: Library, notes: NoteStore = new NoteStore()): (request: Request) => Promise<Response> {
   return async (request: Request): Promise<Response> => {
     let body: unknown
     try {
@@ -248,7 +265,7 @@ export function createRpcHandler(library: Library): (request: Request) => Promis
       return json(failure('bookshelf/bad-request', '请求体不是有效的 JSON。'), 400)
     }
     try {
-      const result = await dispatch(library, body)
+      const result = await dispatch(library, notes, body)
       return json(result)
     } catch (error: unknown) {
       if (error instanceof BookshelfError) return json(failure(error.code, error.message))
@@ -264,7 +281,8 @@ export function registerRoutes(ctx: RouteContext, library: Library): void {
     const connection = injected.get('connection') as ConnectionFace | undefined
     const register = connection?.fetch?.register
     if (register === undefined) return
-    const rpc = createRpcHandler(library)
+    const notes = new NoteStore()
+    const rpc = createRpcHandler(library, notes)
     injected.effect(() => register({
       path: RPC_PATH,
       methods: ['POST'],

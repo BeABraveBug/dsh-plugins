@@ -1,6 +1,6 @@
 # DSH Bookshelf Architecture
 
-状态：已确认的目标架构。阅读侧栏、笔记与 AI 问答部分尚未实现。现有接入在 DSH `0.2.1-rc.5` 上的验证不代表 AI 接口已验证；兼容范围与未验证项见 [README](../README.md)。行为要求见 [Spec](spec.md)。
+状态：已确认的目标架构。阶段 A 的笔记侧栏与独立笔记存储已实现；AI 问答、PDF 文本层和截图附件尚未实现。现有接入在 DSH `0.2.1-rc.5` 上的验证不代表 AI 接口已验证；兼容范围与未验证项见 [README](../README.md)。行为要求见 [Spec](spec.md)。
 
 ## 整体结构与职责
 
@@ -56,10 +56,13 @@ DSH 界面侧                         DSH 宿主侧
 | --- | --- |
 | `src/host/library.ts` | JSON 书架记录、原子写入、替换失败备份与恢复、路径归一化、目录第一层扫描、可用性检查、并发串行化 |
 | `src/host/routes.ts` | 通过 `ctx.connection.fetch.register` 注册 `/api/bookshelf/rpc`、`/api/bookshelf/file`、`/api/bookshelf/cover` 与 `/api/bookshelf/pdfjs`，路由自身不重复实现认证 |
+| `src/host/notes.ts` | 独立 `notes.json` 笔记存储；按书路径关联、原子写入、备份恢复与独立删除 |
 | `src/host/covers.ts` | EPUB 内嵌封面解析、TXT/Markdown/PDF 侧车封面查找、macOS PDF Quick Look 缩略图、按文件时间戳缓存；不持久化封面副本 |
 | `src/shared/types.ts` | Host/Client 共享的 JSON 请求、书目、进度与目录浏览类型 |
 | `src/client/api.ts` | 调用已认证 Fetch 路由并区分网络、认证、域错误 |
 | `src/client/BookshelfApp.tsx` | 宽松 4×3 卡片、每页 12 本分页、添加窗口入口、缺失/不可访问提示、移出确认、搜索与最近打开排序 |
+| `src/client/NoteSidebar.tsx` | 阅读器右侧笔记列表、Markdown 编辑/预览、自动保存与删除 |
+| `src/client/NotesManager.tsx` | 书架级笔记数据查看与按书删除 |
 | `src/client/AddDialog.tsx` | 文件/目录浏览、“已添加”路径视图、浏览中已添加标记与确认移出 |
 | `src/client/BookCover.tsx` | 可见时加载封面；EPUB/侧车图片走 cover 路由，PDF 无封面时用 Range 按需加载第一页缩略图，Range 失败仅对小文件回退整本读取 |
 | `src/client/pdf.ts` | 阅读器和封面共用同一个 PDF.js worker 与兼容垫片 |

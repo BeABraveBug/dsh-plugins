@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
 import type { BookView, ScrollPosition } from '../shared/types.ts'
 import type { Translate } from './i18n.ts'
+import { renderMarkdown } from './markdown.ts'
 
 interface TextReaderProps {
   readonly book: BookView
@@ -16,15 +15,6 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-function renderMarkdown(source: string): string {
-  const parsed = marked.parse(source, { async: false, gfm: true, breaks: false })
-  const html = typeof parsed === 'string' ? parsed : ''
-  return DOMPurify.sanitize(html, {
-    USE_PROFILES: { html: true },
-    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form'],
-    FORBID_ATTR: ['style'],
-  })
-}
 
 export function TextReader({ book, initialPosition, fetchText, onProgress, t }: TextReaderProps) {
   const scrollRef = useRef<HTMLDivElement>(null)

@@ -3,6 +3,7 @@ import type { AddResult, BookRecord, BookView } from '../shared/types.ts'
 import { BookshelfApiError, type BookshelfApi } from './api.ts'
 import type { Translate } from './i18n.ts'
 import { AddDialog, type AddMode } from './AddDialog.tsx'
+import { NotesManager } from './NotesManager.tsx'
 import { Reader } from './Reader.tsx'
 import { BookCover } from './BookCover.tsx'
 import { BookOpenIcon, BookshelfIcon, CheckIcon, PlusIcon, SearchIcon, TrashIcon, WarningIcon } from './icons.tsx'
@@ -66,6 +67,7 @@ export function BookshelfApp({ t, api }: BookshelfAppProps) {
   const [search, setSearch] = useState('')
   const [pageIndex, setPageIndex] = useState(0)
   const [addMode, setAddMode] = useState<AddMode | null>(null)
+  const [notesOpen, setNotesOpen] = useState(false)
   const [readerId, setReaderId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<BookView | null>(null)
@@ -296,6 +298,7 @@ export function BookshelfApp({ t, api }: BookshelfAppProps) {
         <div className="bs-header-actions">
           <button type="button" className="bs-button bs-button-primary" onClick={() => setAddMode('file')}><PlusIcon size={15} /> {t('addFile')}</button>
           <button type="button" className="bs-button" onClick={() => setAddMode('folder')}><PlusIcon size={15} /> {t('addFolder')}</button>
+          <button type="button" className="bs-button" onClick={() => setNotesOpen(true)}>{t('notesData')}</button>
         </div>
       </header>
 
@@ -356,6 +359,7 @@ export function BookshelfApp({ t, api }: BookshelfAppProps) {
                 <div className="bs-empty-actions">
                   <button type="button" className="bs-button bs-button-primary" onClick={() => setAddMode('file')}><PlusIcon size={15} /> {t('addFile')}</button>
                   <button type="button" className="bs-button" onClick={() => setAddMode('folder')}><PlusIcon size={15} /> {t('addFolder')}</button>
+          <button type="button" className="bs-button" onClick={() => setNotesOpen(true)}>{t('notesData')}</button>
                 </div>
               </div>
             )
@@ -421,6 +425,8 @@ export function BookshelfApp({ t, api }: BookshelfAppProps) {
       <footer className="bs-footer">
         <span>{libraryPath === '' ? '' : t('libraryHint', { path: libraryPath })}</span>
       </footer>
+
+      {notesOpen && <NotesManager api={api} t={t} onClose={() => setNotesOpen(false)} />}
 
       {addMode !== null && (
         <AddDialog

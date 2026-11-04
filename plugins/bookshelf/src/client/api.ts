@@ -2,8 +2,12 @@ import type {
   AddResult,
   BookRecord,
   BookView,
+  BookNote,
   BrowseResult,
+  NoteBookSummary,
+  NoteList,
   ReadingPosition,
+  SaveNoteRequest,
   RpcRequest,
   RpcResult,
 } from '../shared/types.ts'
@@ -54,6 +58,11 @@ export interface BookshelfApi {
   saveReaderWidth(id: string, width: number): Promise<BookRecord>
   setRead(id: string, markedRead: boolean): Promise<BookRecord>
   remove(id: string): Promise<{ removed: boolean }>
+  listNotes(bookId: string): Promise<NoteList>
+  saveNote(note: SaveNoteRequest): Promise<BookNote>
+  deleteNote(bookId: string, noteId: string): Promise<{ deleted: boolean }>
+  listNoteBooks(): Promise<NoteBookSummary[]>
+  deleteNoteBook(bookId: string): Promise<{ deleted: boolean }>
   fileBytes(id: string): Promise<ArrayBuffer>
   fileText(id: string): Promise<string>
 }
@@ -101,6 +110,11 @@ export function createBookshelfApi(): BookshelfApi {
     saveReaderWidth: (id, width) => rpc({ op: 'saveReaderWidth', id, width }),
     setRead: (id, markedRead) => rpc({ op: 'setRead', id, markedRead }),
     remove: (id) => rpc({ op: 'remove', id }),
+    listNotes: (bookId) => rpc({ op: 'listNotes', bookId }),
+    saveNote: (note) => rpc({ op: 'saveNote', note }),
+    deleteNote: (bookId, noteId) => rpc({ op: 'deleteNote', bookId, noteId }),
+    listNoteBooks: () => rpc({ op: 'listNoteBooks' }),
+    deleteNoteBook: (bookId) => rpc({ op: 'deleteNoteBook', bookId }),
     fileBytes: async (id) => (await readFileResponse(id)).arrayBuffer(),
     fileText: async (id) => (await readFileResponse(id)).text(),
   }
