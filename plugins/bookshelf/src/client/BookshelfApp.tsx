@@ -107,7 +107,8 @@ export function BookshelfApp({ t, api, initialBookId }: BookshelfAppProps) {
     if (initialBookId === undefined || initialBookHandled.current || books.length === 0) return
     initialBookHandled.current = true
     if (books.some((book) => book.id === initialBookId)) setReaderId(initialBookId)
-  }, [books, initialBookId])
+    else notify('error', t('initialBookMissing'))
+  }, [books, initialBookId, notify, t])
   useEffect(() => {
     const onOnline = () => { void refresh(false) }
     window.addEventListener('online', onOnline)

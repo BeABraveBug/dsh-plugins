@@ -26,3 +26,24 @@
 html, body, #bookshelf-root { height: 100%; margin: 0; }
 body { overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; }
 #bookshelf-root .bs-app { height: 100%; }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --dsw-alias-bg-base: #202122;
+    --dsw-alias-bg-layer-1: #262829;
+    --dsw-alias-bg-layer-2: #2b2d2e;
+    --dsw-alias-bg-layer-3: #333536;
+    --dsw-alias-label-primary: #e7e7e5;
+    --dsw-alias-label-secondary: #a1a39f;
+    --dsw-alias-label-tertiary: #858985;
+    --dsw-alias-label-primary-foreground: #202122;
+    --dsw-alias-border-l1: #353638;
+    --dsw-alias-border-l2: #444644;
+    --dsw-alias-border-l3: #5a5d58;
+    --dsw-alias-button-primary-fill: #c3d6bb;
+    --dsw-alias-markdown-inline-code: #2b2d2e;
+    --dsw-alias-markdown-code-block: #292b2c;
+    --dsw-elevation-soft: 0 8px 28px #00000066;
+  }
+}

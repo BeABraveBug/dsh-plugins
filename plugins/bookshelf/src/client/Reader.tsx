@@ -12,7 +12,6 @@ import { NoteSidebar } from './NoteSidebar.tsx'
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 const CLIENT_ID = crypto.randomUUID()
-const CLIENT_STARTED_AT = Date.now()
 
 interface ReaderProps {
   readonly book: BookView
@@ -30,7 +29,7 @@ function messageOf(error: unknown): string {
 function useProgressSaver(bookId: string, api: BookshelfApi, onSaved: (record: BookRecord) => void) {
   const [state, setState] = useState<SaveState>('idle')
   const [error, setError] = useState<string | null>(null)
-  const pending = useRef<{ position: ReadingPosition; percent: number } | null>(null)
+  const pending = useRef<{ position: ReadingPosition; percent: number; activityAt: number } | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const chain = useRef<Promise<boolean>>(Promise.resolve(true))
   const apiRef = useRef(api)
@@ -50,7 +49,7 @@ function useProgressSaver(bookId: string, api: BookshelfApi, onSaved: (record: B
       setState('saving')
       setError(null)
       try {
-        const record = await apiRef.current.saveProgress(bookId, next.position, next.percent, CLIENT_ID, CLIENT_STARTED_AT)
+        const record = await apiRef.current.saveProgress(bookId, next.position, next.percent, CLIENT_ID, next.activityAt)
         onSavedRef.current(record)
         setState('saved')
         return true
@@ -68,7 +67,7 @@ function useProgressSaver(bookId: string, api: BookshelfApi, onSaved: (record: B
   }, [bookId])
 
   const report = useCallback((position: ReadingPosition, percent: number) => {
-    pending.current = { position, percent }
+    pending.current = { position, percent, activityAt: Date.now() }
     if (timer.current !== null) clearTimeout(timer.current)
     timer.current = setTimeout(() => { void flush() }, 700)
   }, [flush])
