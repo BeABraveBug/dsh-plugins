@@ -308,6 +308,14 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
     onWidthChangeRef.current(clamped)
   }, [])
 
+  const forwardWheel = useCallback((event: React.WheelEvent<HTMLButtonElement>) => {
+    const scroller = scrollRef.current
+    if (scroller === null) return
+    scroller.scrollTop += event.deltaY
+    scroller.scrollLeft += event.deltaX
+    event.preventDefault()
+  }, [])
+
   if (error !== null) {
     return <div className="bs-reader-error" role="alert"><p>{t('readerFailed')}</p><p className="bs-muted">{error}</p></div>
   }
@@ -316,12 +324,14 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
   return (
     <div className="bs-pdf-reader">
       <div className="bs-pdf-toolbar">
-        <button type="button" className="bs-icon-button" onClick={() => goTo(page - 1)} disabled={page <= 1} aria-label={t('prevPage')}><ChevronLeftIcon size={16} /></button>
+        <button type="button" className="bs-icon-button" onClick={() => goTo(page - 1)}
+            onWheel={forwardWheel} disabled={page <= 1} aria-label={t('prevPage')}><ChevronLeftIcon size={16} /></button>
         <form className="bs-page-form" onSubmit={(event) => { event.preventDefault(); const value = Number(pageInput); if (Number.isFinite(value)) goTo(value) }}>
           <input className="bs-page-input" value={pageInput} onChange={(event) => setPageInput(event.target.value)} aria-label={t('page')} inputMode="numeric" />
           <span className="bs-muted">/ {total}</span>
         </form>
-        <button type="button" className="bs-icon-button" onClick={() => goTo(page + 1)} disabled={page >= total} aria-label={t('nextPage')}><ChevronRightIcon size={16} /></button>
+        <button type="button" className="bs-icon-button" onClick={() => goTo(page + 1)}
+            onWheel={forwardWheel} disabled={page >= total} aria-label={t('nextPage')}><ChevronRightIcon size={16} /></button>
         <span className="bs-toolbar-spacer" />
         <button type="button" className="bs-button" onClick={() => changeZoom(zoom - 0.1)} aria-label={t('zoomOut')}>−</button>
         <span className="bs-zoom-label">{Math.round(zoom * 100)}%</span>
@@ -342,6 +352,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
             type="button"
             className="bs-pdf-turn bs-pdf-turn-left"
             onClick={() => goTo(page - 1)}
+            onWheel={forwardWheel}
             disabled={page <= 1}
             aria-label={t('prevPage')}
           ><ChevronLeftIcon size={22} /></button>
@@ -351,6 +362,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
             type="button"
             className="bs-pdf-turn bs-pdf-turn-right"
             onClick={() => goTo(page + 1)}
+            onWheel={forwardWheel}
             disabled={page >= total}
             aria-label={t('nextPage')}
           ><ChevronRightIcon size={22} /></button>

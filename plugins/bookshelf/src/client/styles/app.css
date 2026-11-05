@@ -1018,11 +1018,11 @@
 }
 
 .bs-pdf-viewport { position: relative; flex: 1; min-height: 0; }
-.bs-pdf-viewport .bs-pdf-scroll { height: 100%; }
+.bs-pdf-viewport .bs-pdf-scroll { height: 100%; box-sizing: border-box; }
 .bs-pdf-turn {
   position: absolute;
   top: 0;
-  bottom: 0;
+  bottom: 16px;
   z-index: 3;
   width: 44px;
   display: flex;
@@ -1038,5 +1038,5 @@
 }
 .bs-pdf-turn:hover, .bs-pdf-turn:focus-visible { opacity: 1; }
 .bs-pdf-turn-left { left: 0; }
-.bs-pdf-turn-right { right: 0; background: linear-gradient(to left, color-mix(in srgb, var(--dsw-alias-bg-layer-1) 72%, transparent), transparent); }
+.bs-pdf-turn-right { right: 18px; background: linear-gradient(to left, color-mix(in srgb, var(--dsw-alias-bg-layer-1) 72%, transparent), transparent); }
 .bs-pdf-turn:disabled { opacity: 0; pointer-events: none; }
