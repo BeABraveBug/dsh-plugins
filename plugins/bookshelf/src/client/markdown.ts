@@ -20,6 +20,16 @@ function sanitize(html: string, options: Record<string, unknown>): string {
   return purifier === null ? html : purifier.sanitize(html, options)
 }
 
+function sanitizeRawHtml(html: string): string {
+  return purifier === null ? html : purifier.sanitize(html, {
+    USE_PROFILES: { html: true },
+    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form'],
+    FORBID_ATTR: ['style'],
+  })
+}
+
+marked.use({ renderer: { html: ({ text }: { text: string }) => sanitizeRawHtml(text) } })
+
 marked.use(markedKatex({ throwOnError: false, output: 'html', nonStandard: true }))
 mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', htmlLabels: false, flowchart: { htmlLabels: false }, class: { htmlLabels: false } })
 
