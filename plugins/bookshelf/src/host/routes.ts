@@ -291,7 +291,7 @@ export async function createPdfAssetHandler(assetRoot: string, request: Request)
   return new Response(bytes as unknown as BodyInit, { status: 200, headers })
 }
 
-export async function createStandaloneHandler(assetPath: string, request: Request): Promise<Response> {
+export async function createStandaloneHandler(assetPath: string, request: Request, themePreference = 'system'): Promise<Response> {
   if (request.method === 'HEAD') {
     return new Response(null, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } })
   }
@@ -302,7 +302,7 @@ export async function createStandaloneHandler(assetPath: string, request: Reques
     return new Response('<!doctype html><meta charset="utf-8"><title>Bookshelf</title><p>独立书架资源不可用，请先构建插件。</p>', { status: 503, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } })
   }
   return new Response(`<!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="zh-CN" data-theme-preference="${themePreference}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>书架</title></head><body><div id="bookshelf-root"></div><script>${script}</script></body></html>`, {
     status: 200,
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
@@ -366,11 +366,21 @@ export function registerRoutes(ctx: RouteContext, library: Library): void {
       fetch: (request) => createCoverHandler(library, request),
     }), 'bookshelf: cover route')
     const standaloneAsset = fileURLToPath(new URL('./standalone.js', import.meta.url))
+    const themePreference = (): string => {
+      try {
+        const settings = ctx.get('settings') as { describe?: () => Array<{ ns?: string; value?: { preference?: unknown } }> } | undefined
+        const form = settings?.describe?.().find((entry) => entry.ns === 'ui-theme')
+        const preference = form?.value?.preference
+        return preference === 'light' || preference === 'dark' || preference === 'system' ? preference : 'system'
+      } catch {
+        return 'system'
+      }
+    }
     injected.effect(() => register({
       path: STANDALONE_PATH,
       methods: ['GET', 'HEAD'],
       requestBody: 'buffered',
-      fetch: (request) => createStandaloneHandler(standaloneAsset, request),
+      fetch: (request) => createStandaloneHandler(standaloneAsset, request, themePreference()),
     }), 'bookshelf: standalone route')
     const assetRoot = fileURLToPath(new URL('./pdfjs', import.meta.url))
     injected.effect(() => register({

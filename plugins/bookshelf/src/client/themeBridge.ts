@@ -1,24 +1,34 @@
 const THEME_KEY = 'bookshelf.theme-snapshot.v1'
 
 export interface ThemeSnapshotLite {
+  readonly preference: 'light' | 'dark' | 'system'
   readonly colorScheme: 'light' | 'dark'
   readonly tokens: Record<string, string>
 }
 
 function readTheme(): ThemeSnapshotLite | null {
   try {
-    const parsed = JSON.parse(localStorage.getItem(THEME_KEY) ?? 'null') as ThemeSnapshotLite | null
-    return parsed !== null && (parsed.colorScheme === 'light' || parsed.colorScheme === 'dark') && typeof parsed.tokens === 'object' ? parsed : null
+    const parsed = JSON.parse(localStorage.getItem(THEME_KEY) ?? 'null') as Partial<ThemeSnapshotLite> | null
+    if (parsed === null || (parsed.preference !== 'light' && parsed.preference !== 'dark' && parsed.preference !== 'system')) return null
+    if (parsed.colorScheme !== 'light' && parsed.colorScheme !== 'dark') return null
+    if (parsed.tokens === null || typeof parsed.tokens !== 'object' || Array.isArray(parsed.tokens)) return null
+    const tokens: Record<string, string> = {}
+    for (const [name, value] of Object.entries(parsed.tokens)) {
+      if (typeof value === 'string' && name.startsWith('--dsw-')) tokens[name] = value
+    }
+    return { preference: parsed.preference, colorScheme: parsed.colorScheme, tokens }
   } catch { return null }
 }
 
 export function applyStoredTheme(): void {
   const theme = readTheme()
-  if (theme === null) {
-    document.documentElement.style.colorScheme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    return
-  }
-  document.documentElement.style.colorScheme = theme.colorScheme
+  const attribute = document.documentElement.getAttribute('data-theme-preference')
+  const preference = theme?.preference ?? (attribute === 'light' || attribute === 'dark' || attribute === 'system' ? attribute : 'system')
+  const scheme = preference === 'system'
+    ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : preference
+  document.documentElement.style.colorScheme = scheme
+  if (theme === null || theme.colorScheme !== scheme) return
   for (const [name, value] of Object.entries(theme.tokens)) document.documentElement.style.setProperty(name, value)
 }
 
@@ -36,7 +46,9 @@ export function publishHostTheme(): () => void {
       }
     }
     const scheme = root.colorScheme === 'dark' || document.body.classList.contains('dark') ? 'dark' : 'light'
-    try { localStorage.setItem(THEME_KEY, JSON.stringify({ colorScheme: scheme, tokens })) } catch { /* storage unavailable */ }
+    const source = document.documentElement.getAttribute('data-ds-theme-source')
+    const preference = source === 'light' || source === 'dark' || source === 'system' ? source : 'system'
+    try { localStorage.setItem(THEME_KEY, JSON.stringify({ preference, colorScheme: scheme, tokens })) } catch { /* storage unavailable */ }
   }
   publish()
   const observer = new MutationObserver(publish)

@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { createBookshelfApi } from './api.ts'
 import { BookshelfApp } from './BookshelfApp.tsx'
 import { DICT_EN, DICT_ZH } from './i18n.ts'
-import { applyStoredTheme, publishHostTheme, subscribeStoredTheme } from './themeBridge.ts'
+import { applyStoredTheme, subscribeStoredTheme } from './themeBridge.ts'
 import './styles/app.css'
 import './standalone.css'
 
@@ -20,7 +20,7 @@ const root = document.getElementById('bookshelf-root')
 if (root !== null) {
   applyStoredTheme()
 subscribeStoredTheme()
-publishHostTheme()
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyStoredTheme)
 const initialBookId = new URLSearchParams(window.location.search).get('book') ?? undefined
 createRoot(root).render(h(BookshelfApp, { t: translate, api: createBookshelfApi(), initialBookId }))
 }
