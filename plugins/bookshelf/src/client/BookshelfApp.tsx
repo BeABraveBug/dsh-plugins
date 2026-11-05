@@ -70,6 +70,7 @@ export function BookshelfApp({ t, api, initialBookId }: BookshelfAppProps) {
   const [pageIndex, setPageIndex] = useState(0)
   const [addMode, setAddMode] = useState<AddMode | null>(null)
   const [notesOpen, setNotesOpen] = useState(false)
+  const [detailBook, setDetailBook] = useState<BookView | null>(null)
   const [readerId, setReaderId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<BookView | null>(null)
@@ -308,8 +309,14 @@ export function BookshelfApp({ t, api, initialBookId }: BookshelfAppProps) {
         <div className="bs-header-actions">
           <button type="button" className="bs-button bs-button-primary" onClick={() => setAddMode('file')}><PlusIcon size={15} /> {t('addFile')}</button>
           <button type="button" className="bs-button" onClick={() => setAddMode('folder')}><PlusIcon size={15} /> {t('addFolder')}</button>
-          <button type="button" className="bs-button" onClick={() => setNotesOpen(true)}>{t('notesData')}</button>
           <button type="button" className="bs-button" onClick={() => window.open('/api/bookshelf/standalone', '_blank', 'noopener')}>{t('standalonePage')}</button>
+          <details className="bs-header-menu">
+            <summary className="bs-button">{t('manage')}</summary>
+            <div className="bs-book-menu">
+              <button type="button" onClick={() => setNotesOpen(true)}>{t('notesData')}</button>
+              <button type="button" onClick={() => { void refresh(true) }} disabled={loading}>{t('refresh')}</button>
+            </div>
+          </details>
         </div>
       </header>
 
@@ -355,7 +362,6 @@ export function BookshelfApp({ t, api, initialBookId }: BookshelfAppProps) {
           <input value={search} onChange={(event) => { setSearch(event.target.value); setPageIndex(0) }} placeholder={t('search')} aria-label={t('search')} />
         </label>
         <span className="bs-count">{books.length}</span>
-        <button type="button" className="bs-button" onClick={() => { void refresh(true) }} disabled={loading}>{t('refresh')}</button>
       </div>
 
       <div ref={contentRef} className="bs-content">
@@ -370,8 +376,14 @@ export function BookshelfApp({ t, api, initialBookId }: BookshelfAppProps) {
                 <div className="bs-empty-actions">
                   <button type="button" className="bs-button bs-button-primary" onClick={() => setAddMode('file')}><PlusIcon size={15} /> {t('addFile')}</button>
                   <button type="button" className="bs-button" onClick={() => setAddMode('folder')}><PlusIcon size={15} /> {t('addFolder')}</button>
-          <button type="button" className="bs-button" onClick={() => setNotesOpen(true)}>{t('notesData')}</button>
           <button type="button" className="bs-button" onClick={() => window.open('/api/bookshelf/standalone', '_blank', 'noopener')}>{t('standalonePage')}</button>
+          <details className="bs-header-menu">
+            <summary className="bs-button">{t('manage')}</summary>
+            <div className="bs-book-menu">
+              <button type="button" onClick={() => setNotesOpen(true)}>{t('notesData')}</button>
+              <button type="button" onClick={() => { void refresh(true) }} disabled={loading}>{t('refresh')}</button>
+            </div>
+          </details>
                 </div>
               </div>
             )
@@ -380,34 +392,29 @@ export function BookshelfApp({ t, api, initialBookId }: BookshelfAppProps) {
               : (
                 <div className="bs-grid">
                   {pageBooks.map((book) => (
-                    <article key={book.id} className={`bs-book ${book.availability !== 'ok' ? 'is-unavailable' : ''}`}>
+                    <article key={book.id} className={`bs-book is-cover-card ${book.availability !== 'ok' ? 'is-unavailable' : ''}`}>
                       <button type="button" className="bs-book-main" onClick={() => { void openBook(book) }} disabled={busyId === book.id}>
                         <BookCover book={book} />
                         <span className="bs-book-text">
                           <span className="bs-book-title" title={book.path}>{book.title}</span>
-                          <span className="bs-book-meta">{book.format === 'markdown' ? 'MD' : book.format.toUpperCase()} · {sizeText(book.size)}</span>
                           <span className="bs-book-progress">
                             {book.markedRead
                               ? <span className="bs-read-badge"><CheckIcon size={12} /> {t('readDone')}</span>
                               : book.progress.position !== null && <span className="bs-reading-badge">{t('inProgress')}</span>}
-                            {(book.progress.position !== null || !book.markedRead) && <span>{progressText(book, t)}</span>}
+                            <span>{progressText(book, t)}</span>
                             {book.availability !== 'ok' && <span className={`bs-status bs-status-${book.availability}`}>{book.availability === 'missing' ? t('missing') : t('inaccessible')}</span>}
                           </span>
-                          {book.lastOpenedAt !== null && <span className="bs-book-meta">{t('lastOpened', { date: dateText(book.lastOpenedAt) })}</span>}
                         </span>
                       </button>
-                      <div className="bs-book-actions">
-                        <button type="button" className="bs-button bs-button-primary" onClick={() => { void openBook(book) }} disabled={busyId === book.id || book.availability !== 'ok'}>
-                          <BookOpenIcon size={14} /> {book.progress.position === null ? t('open') : t('reading')}
-                        </button>
-                        <span className="bs-book-action-spacer" />
-                        <button type="button" className={`bs-icon-button bs-book-action-icon ${book.markedRead ? 'is-active' : ''}`} title={book.markedRead ? t('unmarkRead') : t('markRead')} aria-label={book.markedRead ? t('unmarkRead') : t('markRead')} onClick={() => { void toggleRead(book) }} disabled={busyId === book.id}>
-                          <CheckIcon size={16} />
-                        </button>
-                        <button type="button" className="bs-icon-button bs-book-action-icon bs-danger" title={t('remove')} aria-label={t('remove')} onClick={() => setConfirmRemove(book)} disabled={busyId === book.id}>
-                          <TrashIcon size={16} />
-                        </button>
-                      </div>
+                      <details className="bs-book-more">
+                        <summary aria-label={t('moreActions')}>⋯</summary>
+                        <div className="bs-book-menu">
+                          <p>{book.title}</p>
+                          <button type="button" onClick={() => setDetailBook(book)}>{t('details')}</button>
+                          <button type="button" onClick={() => { void toggleRead(book) }} disabled={busyId === book.id}>{book.markedRead ? t('unmarkRead') : t('markRead')}</button>
+                          <button type="button" className="bs-danger" onClick={() => setConfirmRemove(book)} disabled={busyId === book.id}>{t('remove')}</button>
+                        </div>
+                      </details>
                     </article>
                   ))}
                 </div>
@@ -437,6 +444,21 @@ export function BookshelfApp({ t, api, initialBookId }: BookshelfAppProps) {
       <footer className="bs-footer">
         <span>{libraryPath === '' ? '' : t('libraryHint', { path: libraryPath })}</span>
       </footer>
+
+      {detailBook !== null && (
+        <div className="bs-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetailBook(null) }}>
+          <section className="bs-modal bs-confirm" role="dialog" aria-modal="true" aria-label={t('details')}>
+            <header className="bs-modal-header"><h2>{t('details')}</h2></header>
+            <div className="bs-detail-body">
+              <strong>{detailBook.title}</strong>
+              <span>{detailBook.path}</span>
+              <span>{detailBook.format.toUpperCase()} · {sizeText(detailBook.size)}</span>
+              <span>{progressText(detailBook, t)}</span>
+            </div>
+            <footer className="bs-modal-footer"><div className="bs-actions"><button type="button" className="bs-button" onClick={() => setDetailBook(null)}>{t('close')}</button></div></footer>
+          </section>
+        </div>
+      )}
 
       {notesOpen && <NotesManager api={api} t={t} onClose={() => setNotesOpen(false)} />}
 

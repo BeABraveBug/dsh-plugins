@@ -12,6 +12,19 @@ import { NoteSidebar } from './NoteSidebar.tsx'
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 const CLIENT_ID = crypto.randomUUID()
+const SIDEBAR_PREF_KEY = 'bookshelf.readerSidebar.v1'
+
+function readSidebarPreference(): { open: boolean; width: number } {
+  try {
+    const value = JSON.parse(localStorage.getItem(SIDEBAR_PREF_KEY) ?? 'null') as { open?: unknown; width?: unknown } | null
+    return {
+      open: typeof value?.open === 'boolean' ? value.open : false,
+      width: typeof value?.width === 'number' && Number.isFinite(value.width) ? Math.min(640, Math.max(280, value.width)) : 360,
+    }
+  } catch {
+    return { open: false, width: 360 }
+  }
+}
 
 interface ReaderProps {
   readonly book: BookView
@@ -116,10 +129,14 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
   const saver = useProgressSaver(book.id, api, onSaved)
   const [readBusy, setReadBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [notesOpen, setNotesOpen] = useState(true)
-  const [notesWidth, setNotesWidth] = useState(360)
+  const [notesOpen, setNotesOpen] = useState(() => readSidebarPreference().open)
+  const [notesWidth, setNotesWidth] = useState(() => readSidebarPreference().width)
   const noteFlushRef = useRef<(() => Promise<boolean>) | null>(null)
   const readerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    try { localStorage.setItem(SIDEBAR_PREF_KEY, JSON.stringify({ open: notesOpen, width: notesWidth })) } catch { /* optional UI preference */ }
+  }, [notesOpen, notesWidth])
   const [fullscreen, setFullscreen] = useState(false)
   const [readerContext, setReaderContext] = useState<ReaderTextContext | null>(null)
   const [screenshot, setScreenshot] = useState<ReaderScreenshot | null>(null)

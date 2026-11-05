@@ -1055,3 +1055,31 @@
 .bs-markdown .katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
 .bs-mermaid { margin: 1em 0; overflow-x: auto; text-align: center; }
 .bs-mermaid svg { max-width: 100%; height: auto; }
+
+/* Cover-first shelf and immersive reading layout. */
+.bs-grid { grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 28px 24px; }
+.bs-book.is-cover-card { min-height: 0; padding: 0; border: 0; background: transparent; gap: 8px; }
+.bs-book.is-cover-card .bs-book-main { flex-direction: column; gap: 9px; }
+.bs-book.is-cover-card .bs-cover { width: 100%; height: 190px; border-radius: 8px; }
+.bs-book.is-cover-card .bs-book-text { gap: 5px; }
+.bs-book.is-cover-card .bs-book-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 3em; font-size: 13px; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
+.bs-book.is-cover-card .bs-book-progress { font-size: 11px; }
+.bs-book-more { position: absolute; top: 6px; right: 6px; z-index: 4; }
+.bs-book-more > summary { list-style: none; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 6px; background: color-mix(in srgb, var(--dsw-alias-bg-layer-1) 86%, transparent); color: var(--dsw-alias-label-secondary); cursor: pointer; }
+.bs-book-more > summary::-webkit-details-marker { display: none; }
+.bs-book-more[open] > summary { background: var(--dsw-alias-bg-layer-3); color: var(--dsw-alias-label-primary); }
+.bs-book-menu { position: absolute; right: 0; top: 34px; z-index: 8; width: 210px; display: grid; gap: 2px; padding: 6px; border: 0.5px solid var(--dsw-alias-border-l1); border-radius: 8px; background: var(--dsw-alias-bg-layer-1); box-shadow: var(--dsw-elevation-soft); }
+.bs-book-menu p { margin: 4px 6px 6px; color: var(--dsw-alias-label-secondary); font-size: 11px; overflow-wrap: anywhere; }
+.bs-book-menu button { width: 100%; border: 0; border-radius: 5px; background: transparent; color: var(--dsw-alias-label-primary); text-align: left; font: inherit; font-size: 12px; padding: 7px 8px; cursor: pointer; }
+.bs-book-menu button:hover { background: var(--dsw-alias-bg-layer-3); }
+.bs-book-menu button.bs-danger { color: var(--dsw-alias-state-error-primary); }
+.bs-header-menu { position: relative; }
+.bs-header-menu > summary { list-style: none; cursor: pointer; }
+.bs-header-menu > summary::-webkit-details-marker { display: none; }
+.bs-header-menu .bs-book-menu { position: absolute; right: 0; top: calc(100% + 6px); }
+.bs-detail-body { padding: 4px 20px 20px; display: flex; flex-direction: column; gap: 6px; overflow-wrap: anywhere; }
+.bs-detail-body span { color: var(--dsw-alias-label-secondary); font-size: 12px; }
+@media (max-width: 640px) {
+  .bs-book.is-cover-card .bs-cover { height: 150px; }
+  .bs-grid { gap: 20px 14px; }
+}
