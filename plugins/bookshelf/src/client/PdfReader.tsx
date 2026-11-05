@@ -40,6 +40,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
   const scrollRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const textLayerRef = useRef<HTMLDivElement>(null)
+  const textLayerTaskRef = useRef<{ cancel?: () => void } | null>(null)
   const docRef = useRef<PDFDocumentProxy | null>(null)
   const renderTaskRef = useRef<RenderTask | null>(null)
   const initialRef = useRef(initialPosition)
@@ -139,7 +140,9 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
   }, [])
 
   const handleSelection = useCallback(() => {
-    const selected = window.getSelection()?.toString().trim() ?? ''
+    const selection = window.getSelection()
+    if (selection === null || selection.anchorNode === null || !textLayerRef.current?.contains(selection.anchorNode)) return
+    const selected = selection?.toString().trim() ?? ''
     emitContext(selected === '' ? pageTextRef.current : selected)
   }, [emitContext])
 
@@ -232,6 +235,8 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
           return `${item.str}${item.hasEOL ? '\n' : ''}`
         }).join('')
         pageTextRef.current = text
+        textLayerTaskRef.current?.cancel?.()
+        textLayerTaskRef.current = null
         const textLayer = textLayerRef.current
         if (textLayer !== null) {
           textLayer.replaceChildren()
@@ -239,7 +244,10 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
           textLayer.style.setProperty('--total-scale-factor', String(viewport.scale))
           try {
             const layer = new pdfjsLib.TextLayer({ textContentSource: textContent, container: textLayer, viewport })
+            textLayerTaskRef.current = layer
             await layer.render()
+            if (cancelled) return
+            textLayerTaskRef.current = null
           } catch {
             // Text selection is optional; the canvas still renders.
           }
@@ -267,6 +275,8 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
       cancelled = true
       renderTaskRef.current?.cancel()
       renderTaskRef.current = null
+      textLayerTaskRef.current?.cancel?.()
+      textLayerTaskRef.current = null
       renderingRef.current = false
     }
   }, [containerWidth, emitContext, loading, page, report, zoom])

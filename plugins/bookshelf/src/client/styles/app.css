@@ -923,27 +923,35 @@
 .bs-pdf-reader { position: relative; }
 .bs-pdf-canvas-wrap { position: relative; display: block; width: max-content; margin: 0 auto; min-width: 0; }
 .bs-pdf-text-layer {
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
   position: absolute;
-  user-select: text;
-  pointer-events: auto;
   inset: 0;
-  overflow: hidden;
+  overflow: clip;
+  text-align: initial;
   line-height: 1;
   text-size-adjust: none;
   forced-color-adjust: none;
   transform-origin: 0 0;
+  user-select: text;
+  pointer-events: auto;
   z-index: 1;
 }
-.bs-pdf-text-layer span,
-.bs-pdf-text-layer br {
-  color: transparent;
-  position: absolute;
-  white-space: pre;
-  cursor: text;
-  transform-origin: 0% 0%;
+.bs-pdf-text-layer :is(span, br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
+.bs-pdf-text-layer > :not(.markedContent), .bs-pdf-text-layer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
 }
+.bs-pdf-text-layer .markedContent { display: contents; }
+.bs-pdf-text-layer span[role="img"] { user-select: none; cursor: default; }
 .bs-pdf-text-layer ::selection { background: rgba(64, 128, 255, 0.35); }
-.bs-pdf-text-layer .endOfContent { display: block; position: absolute; inset: 100% 0 0; z-index: -1; cursor: default; user-select: none; }
+.bs-pdf-text-layer br::selection { background: transparent; }
+.hiddenCanvasElement { position: absolute; inset: 0 auto auto 0; width: 0; height: 0; display: none; }
 
 .bs-capture-overlay {
   position: absolute;
