@@ -69,6 +69,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
   const [error, setError] = useState<string | null>(null)
   const [capture, setCapture] = useState<ReaderScreenshot | null>(null)
   const [containerWidth, setContainerWidth] = useState(0)
+  const [turnSide, setTurnSide] = useState<'left' | 'right' | null>(null)
   const initialRestoreDone = useRef(false)
   const renderingRef = useRef(false)
 
@@ -308,6 +309,14 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
     onWidthChangeRef.current(clamped)
   }, [])
 
+  const handleViewportPointer = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    if (x < 54 && page > 1) setTurnSide('left')
+    else if (x > rect.width - 54 && page < total) setTurnSide('right')
+    else setTurnSide(null)
+  }, [page, total])
+
   if (error !== null) {
     return <div className="bs-reader-error" role="alert"><p>{t('readerFailed')}</p><p className="bs-muted">{error}</p></div>
   }
@@ -330,11 +339,31 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
         <button type="button" className="bs-button" onClick={captureRegion}>{t('captureRegion')}</button>
         {rendering && <span className="bs-muted">{t('loading')}</span>}
       </div>
-      <div ref={scrollRef} className="bs-pdf-scroll" onScroll={handleScroll}>
-        <div className="bs-pdf-canvas-wrap">
-          <canvas ref={canvasRef} className="bs-pdf-canvas" />
-          <div ref={textLayerRef} className="bs-pdf-text-layer" onMouseUp={handleSelection} />
+      <div className="bs-pdf-viewport" onMouseMove={handleViewportPointer} onMouseLeave={() => setTurnSide(null)}>
+        <div ref={scrollRef} className="bs-pdf-scroll" onScroll={handleScroll}>
+          <div className="bs-pdf-canvas-wrap">
+            <canvas ref={canvasRef} className="bs-pdf-canvas" />
+            <div ref={textLayerRef} className="bs-pdf-text-layer" onMouseUp={handleSelection} />
+          </div>
         </div>
+        {total > 0 && (
+          <button
+            type="button"
+            className={`bs-pdf-turn bs-pdf-turn-left ${turnSide === 'left' ? 'is-visible' : ''}`}
+            onClick={() => { setTurnSide(null); goTo(page - 1) }}
+            disabled={page <= 1}
+            aria-label={t('prevPage')}
+          ><ChevronLeftIcon size={22} /></button>
+        )}
+        {total > 0 && (
+          <button
+            type="button"
+            className={`bs-pdf-turn bs-pdf-turn-right ${turnSide === 'right' ? 'is-visible' : ''}`}
+            onClick={() => { setTurnSide(null); goTo(page + 1) }}
+            disabled={page >= total}
+            aria-label={t('nextPage')}
+          ><ChevronRightIcon size={22} /></button>
+        )}
       </div>
       {capture !== null && (
         <div className="bs-capture-overlay" role="dialog" aria-label={t('capturePreview')}>

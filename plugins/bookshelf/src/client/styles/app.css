@@ -1016,3 +1016,30 @@
   .bs-qa-messages { padding: 18px 14px; }
   .bs-qa-input-zone { padding: 0 14px 14px; }
 }
+
+.bs-pdf-viewport { position: relative; flex: 1; min-height: 0; }
+.bs-pdf-viewport .bs-pdf-scroll { height: 100%; }
+.bs-pdf-turn {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  width: 34px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--dsw-alias-bg-layer-1) 88%, transparent);
+  color: var(--dsw-alias-label-secondary);
+  box-shadow: var(--dsw-elevation-soft);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  cursor: pointer;
+}
+.bs-pdf-turn-left { left: 8px; }
+.bs-pdf-turn-right { right: 8px; }
+.bs-pdf-turn.is-visible, .bs-pdf-turn:focus-visible { opacity: 1; pointer-events: auto; }
+.bs-pdf-turn:disabled { opacity: 0; pointer-events: none; }
