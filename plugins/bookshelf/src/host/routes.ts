@@ -31,6 +31,8 @@ export const RPC_PATH = '/api/bookshelf/rpc'
 export const FILE_PATH = '/api/bookshelf/file'
 export const COVER_PATH = '/api/bookshelf/cover'
 export const PDFJS_ASSET_PATH = '/api/bookshelf/pdfjs'
+export const STANDALONE_PATH = '/api/bookshelf/standalone'
+export const STANDALONE_ASSET_PATH = '/api/bookshelf/standalone.js'
 
 function json(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), {
@@ -289,6 +291,24 @@ export async function createPdfAssetHandler(assetRoot: string, request: Request)
   return new Response(bytes as unknown as BodyInit, { status: 200, headers })
 }
 
+export async function createStandaloneHandler(assetPath: string, request: Request): Promise<Response> {
+  if (request.method === 'HEAD') {
+    return new Response(null, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } })
+  }
+  let script = ''
+  try {
+    script = await readFile(assetPath, 'utf8')
+  } catch {
+    return new Response('<!doctype html><meta charset="utf-8"><title>Bookshelf</title><p>独立书架资源不可用，请先构建插件。</p>', { status: 503, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } })
+  }
+  return new Response(`<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>书架</title></head><body><div id="bookshelf-root"></div><script>${script}</script></body></html>`, {
+    status: 200,
+    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+  })
+}
+
 export function createRpcHandler(library: Library, notes: NoteStore = new NoteStore(), conversations: ConversationStore = new ConversationStore(), getAi: () => AiService | null = () => null): (request: Request) => Promise<Response> {
   return async (request: Request): Promise<Response> => {
     let body: unknown
@@ -345,6 +365,13 @@ export function registerRoutes(ctx: RouteContext, library: Library): void {
       requestBody: 'buffered',
       fetch: (request) => createCoverHandler(library, request),
     }), 'bookshelf: cover route')
+    const standaloneAsset = fileURLToPath(new URL('./standalone.js', import.meta.url))
+    injected.effect(() => register({
+      path: STANDALONE_PATH,
+      methods: ['GET', 'HEAD'],
+      requestBody: 'buffered',
+      fetch: (request) => createStandaloneHandler(standaloneAsset, request),
+    }), 'bookshelf: standalone route')
     const assetRoot = fileURLToPath(new URL('./pdfjs', import.meta.url))
     injected.effect(() => register({
       path: PDFJS_ASSET_PATH,

@@ -116,8 +116,25 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
   const [notesOpen, setNotesOpen] = useState(true)
   const [notesWidth, setNotesWidth] = useState(360)
   const noteFlushRef = useRef<(() => Promise<boolean>) | null>(null)
+  const readerRef = useRef<HTMLDivElement>(null)
+  const [fullscreen, setFullscreen] = useState(false)
   const [readerContext, setReaderContext] = useState<ReaderTextContext | null>(null)
   const [screenshot, setScreenshot] = useState<ReaderScreenshot | null>(null)
+
+  useEffect(() => {
+    const onChange = () => setFullscreen(document.fullscreenElement === readerRef.current)
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (document.fullscreenElement === readerRef.current) await document.exitFullscreen()
+      else await readerRef.current?.requestFullscreen()
+    } catch (cause: unknown) {
+      setActionError(messageOf(cause))
+    }
+  }, [])
 
   const close = useCallback(async () => {
     const saved = await saver.flush()
@@ -183,7 +200,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
   )
 
   return (
-    <div className="bs-reader">
+    <div ref={readerRef} className="bs-reader">
       <header className="bs-reader-header">
         <button type="button" className="bs-button bs-back-button" onClick={() => { void close() }}>
           <ArrowLeftIcon size={16} /> {t('back')}
@@ -200,6 +217,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
                   : ''}
           </span>
           {saver.state === 'error' && <button type="button" className="bs-button" onClick={() => { void saver.flush() }}>{t('saveRetry')}</button>}
+          <button type="button" className="bs-button" onClick={() => { void toggleFullscreen() }}>{fullscreen ? t('exitFullscreen') : t('enterFullscreen')}</button>
           <button type="button" className={`bs-button ${notesOpen ? 'bs-button-primary' : ''}`} onClick={() => { void toggleNotes() }}>
             {t('notes')}
           </button>

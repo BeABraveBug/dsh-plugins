@@ -299,6 +299,7 @@ export function BookshelfApp({ t, api }: BookshelfAppProps) {
           <button type="button" className="bs-button bs-button-primary" onClick={() => setAddMode('file')}><PlusIcon size={15} /> {t('addFile')}</button>
           <button type="button" className="bs-button" onClick={() => setAddMode('folder')}><PlusIcon size={15} /> {t('addFolder')}</button>
           <button type="button" className="bs-button" onClick={() => setNotesOpen(true)}>{t('notesData')}</button>
+          <button type="button" className="bs-button" onClick={() => window.open('/api/bookshelf/standalone', '_blank', 'noopener')}>{t('standalonePage')}</button>
         </div>
       </header>
 
@@ -360,6 +361,7 @@ export function BookshelfApp({ t, api }: BookshelfAppProps) {
                   <button type="button" className="bs-button bs-button-primary" onClick={() => setAddMode('file')}><PlusIcon size={15} /> {t('addFile')}</button>
                   <button type="button" className="bs-button" onClick={() => setAddMode('folder')}><PlusIcon size={15} /> {t('addFolder')}</button>
           <button type="button" className="bs-button" onClick={() => setNotesOpen(true)}>{t('notesData')}</button>
+          <button type="button" className="bs-button" onClick={() => window.open('/api/bookshelf/standalone', '_blank', 'noopener')}>{t('standalonePage')}</button>
                 </div>
               </div>
             )

@@ -19,6 +19,7 @@
     "lib/index.js",
     "lib/index.d.ts",
     "lib/client.js",
+    "lib/standalone.js",
     "lib/pdfjs/**",
     "cordis.patch.yml",
     "locale/*.json",
@@ -54,12 +55,14 @@
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/react": "^18.3.31",
+    "@types/react-dom": "18.3.0",
     "dompurify": "^3.2.6",
     "epubjs": "^0.3.93",
     "jszip": "^3.10.2",
     "marked": "^15.0.12",
     "pdfjs-dist": "^5.4.54",
     "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "tsdown": "^0.23.1",
     "typescript": "~5.9.3",
     "vitest": "^3.2.4"

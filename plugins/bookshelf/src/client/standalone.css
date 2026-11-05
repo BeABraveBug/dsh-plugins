@@ -1,0 +1,27 @@
+:root {
+  color-scheme: light;
+  --dsw-alias-bg-base: #ffffff;
+  --dsw-alias-bg-layer-1: #f7f7f5;
+  --dsw-alias-bg-layer-2: #f1f1ef;
+  --dsw-alias-bg-layer-3: #e9e9e6;
+  --dsw-alias-label-primary: #202124;
+  --dsw-alias-label-secondary: #5f6368;
+  --dsw-alias-label-tertiary: #80868b;
+  --dsw-alias-label-primary-foreground: #ffffff;
+  --dsw-alias-border-l1: #e2e2df;
+  --dsw-alias-border-l2: #d3d3cf;
+  --dsw-alias-border-l3: #b9b9b4;
+  --dsw-alias-button-primary-fill: #202124;
+  --dsw-alias-state-error-primary: #c5221f;
+  --dsw-alias-state-success-primary: #188038;
+  --dsw-alias-state-warn-primary: #b06000;
+  --dsw-alias-state-business-primary: #1a73e8;
+  --dsw-alias-markdown-inline-code: #f1f3f4;
+  --dsw-alias-markdown-code-block: #f1f3f4;
+  --dsw-elevation-soft: 0 4px 18px #0000001a;
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+}
+html, body, #bookshelf-root { height: 100%; margin: 0; }
+body { overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; }
+#bookshelf-root .bs-app { height: 100%; }

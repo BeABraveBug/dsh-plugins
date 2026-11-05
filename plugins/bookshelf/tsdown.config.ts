@@ -129,4 +129,29 @@ export default defineConfig([
       footer: 'return module.exports; } });',
     },
   },
+  {
+    name: `${pkg.name}/standalone`,
+    entry: { standalone: 'src/client/standalone.tsx' },
+    outDir: 'lib',
+    format: ['iife'],
+    platform: 'browser',
+    target: 'es2022',
+    dts: false,
+    sourcemap: false,
+    clean: false,
+    minify: !WATCH,
+    define: {
+      'process.env': '{}',
+      'process.env.NODE_ENV': JSON.stringify(NODE_ENV),
+      'import.meta.env.MODE': JSON.stringify(NODE_ENV),
+      'import.meta.env': JSON.stringify({ MODE: NODE_ENV }),
+    },
+    deps: { alwaysBundle: () => true },
+    plugins: [rawChannel(), cssChannel(pkg.name)],
+    outputOptions: {
+      comments: { legal: true, annotation: false, jsdoc: false },
+      entryFileNames: 'standalone.js',
+    },
+  },
 ])
+

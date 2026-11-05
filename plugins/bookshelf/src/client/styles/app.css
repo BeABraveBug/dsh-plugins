@@ -1040,3 +1040,6 @@
 .bs-pdf-turn-left { left: 0; }
 .bs-pdf-turn-right { right: 18px; background: linear-gradient(to left, color-mix(in srgb, var(--dsw-alias-bg-layer-1) 72%, transparent), transparent); }
 .bs-pdf-turn:disabled { opacity: 0; pointer-events: none; }
+
+.bs-reader:fullscreen { background: var(--dsw-alias-bg-base); }
+.bs-reader:fullscreen .bs-reader-header { background: var(--dsw-alias-bg-base); }
