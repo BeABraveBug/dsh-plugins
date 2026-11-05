@@ -146,6 +146,16 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
     emitContext(selected === '' ? pageTextRef.current : selected)
   }, [emitContext])
 
+  useEffect(() => {
+    const onSelectionChange = () => {
+      const selection = window.getSelection()
+      if (selection === null || selection.anchorNode === null || !textLayerRef.current?.contains(selection.anchorNode)) return
+      handleSelection()
+    }
+    document.addEventListener('selectionchange', onSelectionChange)
+    return () => document.removeEventListener('selectionchange', onSelectionChange)
+  }, [handleSelection])
+
   const captureRegion = useCallback(() => {
     const canvas = canvasRef.current
     const scroller = scrollRef.current
@@ -249,9 +259,12 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
             if (cancelled) return
             textLayerTaskRef.current = null
           } catch {
-            // Text selection is optional; the canvas still renders.
+            // A cancelled text layer rejects its render promise. Do not
+            // publish the old page's text or advance progress after cancel.
+            if (cancelled) return
           }
         }
+        if (cancelled) return
         emitContext(text)
         const scroller = scrollRef.current
         if (scroller !== null) {
