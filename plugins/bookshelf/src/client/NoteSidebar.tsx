@@ -1,13 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { MutableRefObject } from 'react'
 import type { AiModelCatalog, AiSelection, BookNote, BookView, ReaderScreenshot, ReaderTextContext } from '../shared/types.ts'
 import type { BookshelfApi } from './api.ts'
 import type { Translate } from './i18n.ts'
-import { CheckIcon, PlusIcon, TrashIcon } from './icons.tsx'
+import { CloseIcon, MoreIcon, PlusIcon, SendIcon, TrashIcon } from './icons.tsx'
 import { renderMarkdown } from './markdown.ts'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 type SidebarTab = 'notes' | 'qa'
+
+interface CopyNotice {
+  readonly index: number
+  readonly error: boolean
+  readonly detail?: string
+}
 
 interface NoteSidebarProps {
   readonly book: BookView
@@ -25,11 +31,15 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-function noteDate(timestamp: number): string {
-  return new Intl.DateTimeFormat(undefined, { month: '2-digit', day: '2-digit' }).format(new Date(timestamp))
+/** Describes the reading range attached to the pending question without replacing the excerpt itself. */
+function contextRangeLabel(context: ReaderTextContext, t: Translate): string {
+  const anchor = context.anchor
+  if (anchor.kind === 'pdf') return t('pdfProgress', { page: anchor.page, total: anchor.total })
+  if (anchor.kind === 'scroll') return t('percentProgress', { percent: Math.round(anchor.ratio * 100) })
+  return 'EPUB'
 }
 
-/** Side panel for per-book Markdown notes. AI Q&A is added in a later phase. */
+/** Side panel with per-book Markdown notes and current-context Q&A. */
 export function NoteSidebar({ book, api, t, context, screenshot, onClearScreenshot, onClearContext, onClose, flushRef }: NoteSidebarProps) {
   const [tab, setTab] = useState<SidebarTab>('notes')
   const [notes, setNotes] = useState<BookNote[]>([])
@@ -37,7 +47,6 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
   const [title, setTitle] = useState('')
   const [markdown, setMarkdown] = useState('')
   const [preview, setPreview] = useState(false)
-  const [contextOpen, setContextOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +59,7 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
   const [aiBusy, setAiBusy] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
   const [modelError, setModelError] = useState<string | null>(null)
+  const [copyNotice, setCopyNotice] = useState<CopyNotice | null>(null)
   const savedSelectionRef = useRef<AiSelection | null | undefined>(undefined)
   const dirty = useRef(false)
   const revision = useRef(0)
@@ -58,6 +68,9 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
   const selectedRef = useRef<BookNote | null>(null)
   const titleRef = useRef('')
   const markdownRef = useRef('')
+  const pickerRef = useRef<HTMLDetailsElement | null>(null)
+  const moreRef = useRef<HTMLDetailsElement | null>(null)
+  const panelId = useId()
   titleRef.current = title
   markdownRef.current = markdown
   selectedRef.current = notes.find((note) => note.id === selectedId) ?? null
@@ -283,137 +296,203 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
     changed()
   }
 
+  const copyAnswer = async (index: number, content: string) => {
+    try {
+      const clipboard = (navigator as Navigator & { clipboard?: Clipboard }).clipboard
+      if (clipboard === undefined) throw new Error(t('copyUnavailable'))
+      await clipboard.writeText(content)
+      setCopyNotice({ index, error: false })
+    } catch (cause: unknown) {
+      setCopyNotice({ index, error: true, detail: messageOf(cause) })
+    }
+  }
+
+  const closeMenu = (ref: MutableRefObject<HTMLDetailsElement | null>) => {
+    const element = ref.current
+    if (element === null) return
+    element.open = false
+    element.querySelector<HTMLElement>('summary')?.focus()
+  }
+
   useEffect(() => {
     if (flushRef !== undefined) flushRef.current = flush
     return () => { if (flushRef !== undefined) flushRef.current = null }
   }, [flush, flushRef])
 
   const previewHtml = useMemo(() => preview ? renderMarkdown(markdown) : '', [markdown, preview])
+  const renderedAnswers = useMemo(
+    () => messages.map((message) => message.role === 'assistant' ? renderMarkdown(message.content) : ''),
+    [messages],
+  )
+  const contextSummary = useMemo(
+    () => context === null ? '' : `${t('contextTitle')} · ${contextRangeLabel(context, t)}`,
+    [context, t],
+  )
   const selected = selectedRef.current
+  const notesPanelId = `${panelId}-notes`
+  const qaPanelId = `${panelId}-qa`
 
   return (
-    <aside className="bs-note-sidebar" aria-label={t('notes')}>
+    <aside className="bs-note-sidebar" aria-label={t('readingPanel')}>
       <header className="bs-note-header">
         <div className="bs-note-tabs" role="tablist">
-          <button type="button" role="tab" aria-selected={tab === 'notes'} className={`bs-note-tab ${tab === 'notes' ? 'is-active' : ''}`} onClick={() => setTab('notes')}>{t('notes')}</button>
-          <button type="button" role="tab" aria-selected={tab === 'qa'} className={`bs-note-tab ${tab === 'qa' ? 'is-active' : ''}`} onClick={() => setTab('qa')}>{t('qa')}</button>
+          <button type="button" role="tab" id={`${panelId}-notes-tab`} aria-selected={tab === 'notes'} aria-controls={notesPanelId} className={`bs-note-tab ${tab === 'notes' ? 'is-active' : ''}`} onClick={() => setTab('notes')}>{t('notes')}</button>
+          <button type="button" role="tab" id={`${panelId}-qa-tab`} aria-selected={tab === 'qa'} aria-controls={qaPanelId} className={`bs-note-tab ${tab === 'qa' ? 'is-active' : ''}`} onClick={() => setTab('qa')}>{t('qa')}</button>
         </div>
-        <button type="button" className="bs-icon-button" onClick={() => { void flush().then((saved) => { if (saved) onClose() }) }} aria-label={t('close')}>×</button>
+        <button type="button" className="bs-icon-button" aria-label={t('close')} title={t('close')} onClick={() => { void flush().then((saved) => { if (saved) onClose() }) }}><CloseIcon size={16} /></button>
       </header>
 
-      {tab === 'qa' && (
-        <div className="bs-note-qa">
-          <div className="bs-qa-model">
-            <label>{t('model')}</label>
-            <select
-              value={selection === null ? '' : `${selection.provider}::${selection.model}`}
-              onChange={(event) => {
-                const [provider, model] = event.target.value.split('::')
-                const next = provider !== undefined && model !== undefined && provider !== '' ? { provider, model } : null
-                setSelection(next)
-                void api.saveBookAiSelection(book.id, book.path, book.title, book.format, next).catch((cause: unknown) => setAiError(messageOf(cause)))
-              }}
-              disabled={aiBusy || models === null}
-            >
-              <option value="">{t('defaultModel')}</option>
-              {models?.providers.flatMap((provider) => provider.models.map((model) => (
-                <option key={`${provider.id}::${model.id}`} value={`${provider.id}::${model.id}`}>{provider.name} · {model.name}</option>
-              )))}
-            </select>
-          </div>
-          {messages.length > 0 && <button type="button" className="bs-link-button" onClick={() => { void api.clearConversation(book.id).then(() => setMessages([])).catch((cause: unknown) => setAiError(messageOf(cause))) }}>{t('clearConversation')}</button>}
-          {modelError !== null && <div className="bs-inline-error" role="alert">{modelError}</div>}
-          <section className="bs-context-card">
-            <div className="bs-context-head">
-              <button type="button" className="bs-context-toggle" onClick={() => setContextOpen((current) => !current)}>{t('contextTitle')}</button>
-              {context !== null && <span>{context.anchor.kind === 'pdf' ? `PDF · ${context.anchor.page}` : ''}</span>}
-              {context !== null && <button type="button" className="bs-link-button" onClick={onClearContext}>{t('clearContext')}</button>}
+      <section className="bs-note-notes" role="tabpanel" id={notesPanelId} aria-labelledby={`${panelId}-notes-tab`} hidden={tab !== 'notes'}>
+        <div className="bs-note-tools">
+          <details className="bs-note-picker" ref={pickerRef}>
+            <summary>{t('bookNotesCount', { count: notes.length })}</summary>
+            <div className="bs-note-popover">
+              {notes.length === 0 && <p className="bs-note-muted">{t('noNotes')}</p>}
+              {notes.map((note) => (
+                <button key={note.id} type="button" aria-pressed={note.id === selectedId} disabled={busy}
+                  onClick={() => {
+                    closeMenu(pickerRef)
+                    void selectNote(note)
+                  }}>
+                  {note.title || t('untitledNote')}
+                </button>
+              ))}
             </div>
-            {context === null
-              ? <p className="bs-muted">{t('contextEmpty')}</p>
-              : contextOpen && (
-                <>
-                  <p className="bs-context-excerpt">{context.excerpt}</p>
-                  {context.truncated && <span className="bs-muted">{t('contextTruncated')}</span>}
-                </>
-              )}
-          </section>
-          {screenshot !== null && (
-            <section className="bs-context-card">
-              <div className="bs-context-head">
-                <strong>{t('capturePreview')}</strong>
-                <button type="button" className="bs-link-button" onClick={onClearScreenshot}>{t('clearContext')}</button>
-              </div>
-              <img className="bs-context-image" src={screenshot.dataUrl} alt={t('capturePreview')} />
-              <span className="bs-muted">{t('screenshotTextOnlyPending')}</span>
-            </section>
-          )}
-          <div className="bs-qa-messages">
-            {messages.map((message, index) => (
-              <div key={index} className={`bs-qa-message bs-qa-${message.role}`}>
-                <div>{message.content}</div>
-                {message.role === 'assistant' && selectedId !== null && <button type="button" className="bs-link-button" onClick={() => addAnswer(message.content)}>{t('addAnswerToNote')}</button>}
-              </div>
-            ))}
-          </div>
-          {aiError !== null && <div className="bs-inline-error" role="alert">{aiError}</div>}
-          <div className="bs-qa-compose">
-            <textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={t('askPlaceholder')} aria-label={t('askPlaceholder')} />
-            <button type="button" className="bs-qa-send" aria-label={aiBusy ? t('sending') : t('ask')} onClick={() => { void ask() }} disabled={aiBusy || question.trim() === '' || context === null}>{aiBusy ? '…' : '↑'}</button>
+          </details>
+          <div className="bs-note-actions">
+            {selected !== null && (
+              <button type="button" className="bs-note-action" onClick={() => setPreview((current) => !current)} disabled={busy}>{preview ? t('editNote') : t('previewNote')}</button>
+            )}
+            <button type="button" className="bs-note-action bs-note-action-icon" aria-label={t('newNote')} title={t('newNote')} onClick={() => { void createNote() }} disabled={busy || loading}><PlusIcon size={16} /></button>
+            {selected !== null && (
+              <details className="bs-note-more" ref={moreRef} onToggle={(event) => { if (!event.currentTarget.open) setConfirmDelete(false) }}>
+                <summary aria-label={t('moreActions')} title={t('moreActions')}><MoreIcon size={16} /></summary>
+                <div className="bs-note-popover">
+                  <button type="button" className="bs-danger" disabled={busy}
+                    onClick={() => {
+                      if (confirmDelete) {
+                        closeMenu(moreRef)
+                        void removeNote()
+                      } else {
+                        setConfirmDelete(true)
+                      }
+                    }}>
+                    <TrashIcon size={14} /> {confirmDelete ? t('confirmDeleteNote') : t('deleteNote')}
+                  </button>
+                </div>
+              </details>
+            )}
           </div>
         </div>
-      )}
 
-      {tab === 'notes' && (
-        <div className="bs-note-body">
-          <div className="bs-note-picker-row">
-            <select className="bs-note-picker" value={selectedId ?? ''} onChange={(event) => { const note = notes.find((entry) => entry.id === event.target.value); if (note !== undefined) void selectNote(note) }} aria-label={t('notes')} disabled={busy || notes.length === 0}>
-              {notes.length === 0 && <option value="">{t('noNotes')}</option>}
-              {notes.map((note) => <option key={note.id} value={note.id}>{note.title || t('untitledNote')}</option>)}
-            </select>
-            <span className="bs-note-count">{notes.length}</span>
-          </div>
-          <div className="bs-note-toolbar">
-            <button type="button" className="bs-button bs-button-primary" onClick={() => { void createNote() }} disabled={busy || loading}><PlusIcon size={14} /> {t('newNote')}</button>
-            {selected !== null && (
-              <>
-                <button type="button" className="bs-button" onClick={() => setPreview((current) => !current)} disabled={busy}>{preview ? t('editNote') : t('previewNote')}</button>
-                <button type="button" className={`bs-button ${confirmDelete ? 'bs-button-danger' : ''}`} onClick={() => { if (confirmDelete) { void removeNote() } else setConfirmDelete(true) }} disabled={busy}>
-                  <TrashIcon size={14} /> {confirmDelete ? t('confirmDeleteNote') : t('deleteNote')}
-                </button>
-              </>
-            )}
-            {saveState === 'error' && <button type="button" className="bs-button" onClick={() => { void flush() }}>{t('saveRetry')}</button>}
-          </div>
-          {error !== null && <div className="bs-inline-error" role="alert">{error}</div>}
-          {loading && <div className="bs-empty">{t('loading')}</div>}
-          {!loading && notes.length === 0 && <div className="bs-empty">{t('noNotes')}</div>}
-          {!loading && notes.length > 0 && (
-            <>
-              <div className="bs-note-list">
-                {notes.map((note) => (
-                  <button key={note.id} type="button" className={`bs-note-list-item ${note.id === selectedId ? 'is-active' : ''}`} onClick={() => { void selectNote(note) }} disabled={busy}>
-                    <span className="bs-note-list-title">{note.title || t('untitledNote')}</span>
-                    <span className="bs-note-list-date">{noteDate(note.updatedAt)}</span>
-                  </button>
-                ))}
-              </div>
-              {selected !== null && (
-                <div className="bs-note-editor">
-                  <input className="bs-note-title-input" value={title} onChange={(event) => { setTitle(event.target.value); changed() }} placeholder={t('noteTitle')} aria-label={t('noteTitle')} />
-                  {preview
-                    ? <div className="bs-note-preview bs-markdown" dangerouslySetInnerHTML={{ __html: previewHtml }} />
-                    : <textarea className="bs-note-textarea" value={markdown} onChange={(event) => { setMarkdown(event.target.value); changed() }} placeholder={t('notePlaceholder')} aria-label={t('notePlaceholder')} />}
+        <div className="bs-note-scroll">
+          {error !== null && (
+            <div className="bs-note-error" role="alert">
+              <span>{error}</span>
+              {saveState === 'error' && <button type="button" className="bs-button" onClick={() => { void flush() }}>{t('saveRetry')}</button>}
+            </div>
+          )}
+          {loading && <div className="bs-note-empty">{t('loading')}</div>}
+          {!loading && notes.length === 0 && <div className="bs-note-empty">{t('noNotes')}</div>}
+          {!loading && notes.length > 0 && selected === null && <div className="bs-note-empty">{t('noNotes')}</div>}
+          {!loading && selected !== null && (
+            <article className="bs-note-document">
+              <input className="bs-note-title-input" value={title} onChange={(event) => { setTitle(event.target.value); changed() }} placeholder={t('noteTitle')} aria-label={t('noteTitle')} />
+              {preview
+                ? <div className="bs-note-preview bs-markdown" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                : <textarea className="bs-note-textarea" value={markdown} onChange={(event) => { setMarkdown(event.target.value); changed() }} placeholder={t('notePlaceholder')} aria-label={t('notePlaceholder')} />}
+            </article>
+          )}
+        </div>
+
+        <footer className={`bs-note-footer bs-note-save-${saveState}`}>
+          <span role="status">{saveState === 'saving' ? t('saveSaving') : saveState === 'saved' ? t('saveSaved') : saveState === 'error' ? t('saveFailed') : ''}</span>
+          <span>Markdown</span>
+        </footer>
+      </section>
+
+      <section className="bs-note-qa" role="tabpanel" id={qaPanelId} aria-labelledby={`${panelId}-qa-tab`} hidden={tab !== 'qa'}>
+        <div className="bs-qa-messages">
+          {messages.length === 0 && <div className="bs-note-empty">{t('qaEmpty')}</div>}
+          {messages.length > 0 && (
+            <div className="bs-qa-history-tools">
+              <button type="button" className="bs-qa-action" onClick={() => { void api.clearConversation(book.id).then(() => { setMessages([]); setCopyNotice(null) }).catch((cause: unknown) => setAiError(messageOf(cause))) }}>{t('clearConversation')}</button>
+            </div>
+          )}
+          {messages.map((message, index) => (
+            <article key={index} className={`bs-qa-message bs-qa-${message.role}`}>
+              {message.role === 'assistant' && <div className="bs-qa-assistant-name">{t('assistantName')}</div>}
+              {message.role === 'assistant'
+                ? <div className="bs-qa-answer bs-markdown" dangerouslySetInnerHTML={{ __html: renderedAnswers[index] ?? '' }} />
+                : <div className="bs-qa-user-text">{message.content}</div>}
+              {message.role === 'assistant' && (
+                <div className="bs-qa-message-actions">
+                  {selectedId !== null && <button type="button" className="bs-qa-action" onClick={() => addAnswer(message.content)}>{t('addAnswerToNote')}</button>}
+                  <button type="button" className="bs-qa-action" onClick={() => { void copyAnswer(index, message.content) }}>{t('copyAnswer')}</button>
+                  {copyNotice !== null && copyNotice.index === index && (
+                    <span className={`bs-qa-action-status ${copyNotice.error ? 'is-error' : ''}`} role="status" title={copyNotice.detail}>
+                      {copyNotice.error ? t('copyFailed') : t('copied')}
+                    </span>
+                  )}
                 </div>
               )}
-            </>
-          )}
-          <footer className={`bs-note-footer bs-note-save-${saveState}`}>
-            <span>{saveState === 'saving' ? t('saveSaving') : saveState === 'saved' ? t('saveSaved') : saveState === 'error' ? t('saveFailed') : ''}</span>
-            <span>Markdown</span>
-          </footer>
+            </article>
+          ))}
         </div>
-      )}
+
+        <div className="bs-qa-input-zone">
+          {modelError !== null && <div className="bs-qa-error" role="alert">{modelError}</div>}
+          {aiError !== null && <div className="bs-qa-error" role="alert">{aiError}</div>}
+          <div className="bs-qa-composer">
+            {context === null
+              ? <p className="bs-qa-context-empty">{t('contextEmpty')}</p>
+              : (
+                <div className="bs-qa-context-row">
+                  <details className="bs-qa-context">
+                    <summary>{contextSummary}</summary>
+                    <div className="bs-qa-context-text">
+                      <p>{context.excerpt}</p>
+                      {context.truncated && <p>{t('contextTruncated')}</p>}
+                    </div>
+                  </details>
+                  <button type="button" className="bs-qa-attachment-remove" aria-label={t('clearContext')} title={t('clearContext')} onClick={onClearContext}><CloseIcon size={14} /></button>
+                </div>
+              )}
+            {screenshot !== null && (
+              <div className="bs-qa-capture">
+                <div className="bs-qa-capture-head">
+                  <span>{t('capturePreview')}</span>
+                  <button type="button" className="bs-qa-attachment-remove" aria-label={t('discardScreenshot')} title={t('discardScreenshot')} onClick={onClearScreenshot}><CloseIcon size={14} /></button>
+                </div>
+                <img className="bs-qa-capture-image" src={screenshot.dataUrl} alt={t('capturePreview')} />
+                <span className="bs-note-muted">{t('screenshotTextOnlyPending')}</span>
+              </div>
+            )}
+            <textarea className="bs-qa-question-input" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={t('askPlaceholder')} aria-label={t('askPlaceholder')} />
+            <div className="bs-qa-compose-bottom">
+              <div className="bs-qa-model">
+                <select
+                  aria-label={t('model')}
+                  value={selection === null ? '' : `${selection.provider}::${selection.model}`}
+                  onChange={(event) => {
+                    const [provider, model] = event.target.value.split('::')
+                    const next = provider !== undefined && model !== undefined && provider !== '' ? { provider, model } : null
+                    setSelection(next)
+                    void api.saveBookAiSelection(book.id, book.path, book.title, book.format, next).catch((cause: unknown) => setAiError(messageOf(cause)))
+                  }}
+                  disabled={aiBusy || models === null}
+                >
+                  <option value="">{t('defaultModel')}</option>
+                  {models?.providers.flatMap((provider) => provider.models.map((model) => (
+                    <option key={`${provider.id}::${model.id}`} value={`${provider.id}::${model.id}`}>{provider.name} · {model.name}</option>
+                  )))}
+                </select>
+              </div>
+              <button type="button" className="bs-qa-send" aria-label={aiBusy ? t('sending') : t('ask')} title={aiBusy ? t('sending') : t('ask')} onClick={() => { void ask() }} disabled={aiBusy || question.trim() === '' || context === null}>{aiBusy ? '…' : <SendIcon size={16} />}</button>
+            </div>
+          </div>
+        </div>
+      </section>
     </aside>
   )
 }

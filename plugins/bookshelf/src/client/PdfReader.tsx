@@ -69,6 +69,8 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
   const [error, setError] = useState<string | null>(null)
   const [capture, setCapture] = useState<ReaderScreenshot | null>(null)
   const [containerWidth, setContainerWidth] = useState(0)
+  const initialRestoreDone = useRef(false)
+  const renderingRef = useRef(false)
 
   pageRef.current = page
   totalRef.current = total
@@ -177,12 +179,16 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
     const scroller = scrollRef.current
     if (scroller === null) return
     const observer = new ResizeObserver(() => {
+      const width = scroller.clientWidth
+      setContainerWidth(width)
+      // Never capture geometry before the initial saved position has been
+      // applied, or from a transient layout while a render is in flight.
+      if (!initialRestoreDone.current || renderingRef.current) return
       const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight)
       if (max > 0) {
         restoreRef.current = scroller.scrollTop / max
         suppressRef.current = true
       }
-      setContainerWidth(scroller.clientWidth)
     })
     observer.observe(scroller)
     return () => observer.disconnect()
@@ -193,6 +199,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
     if (doc === null || loading) return
     let cancelled = false
     setRendering(true)
+    renderingRef.current = true
     onContextRef.current(null)
     ;(async () => {
       try {
@@ -244,6 +251,8 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
           restoreRef.current = 0
           scroller.scrollTop = offset * Math.max(0, scroller.scrollHeight - scroller.clientHeight)
           suppressRef.current = false
+          initialRestoreDone.current = true
+          renderingRef.current = false
           report(pageRef.current, offset)
         }
       } catch (cause: unknown) {
@@ -251,12 +260,14 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
         if ((cause as { name?: string } | null)?.name === 'RenderingCancelledException') return
         setError(messageOf(cause))
         setRendering(false)
+        renderingRef.current = false
       }
     })()
     return () => {
       cancelled = true
       renderTaskRef.current?.cancel()
       renderTaskRef.current = null
+      renderingRef.current = false
     }
   }, [containerWidth, emitContext, loading, page, report, zoom])
 
@@ -276,6 +287,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
     if (target === pageRef.current) return
     restoreRef.current = 0
     suppressRef.current = true
+    renderingRef.current = true
     setPage(target)
   }, [])
 
@@ -290,6 +302,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
       restoreRef.current = max === 0 ? 0 : scroller.scrollTop / max
       suppressRef.current = true
     }
+    renderingRef.current = true
     zoomRef.current = clamped
     setZoom(clamped)
     onWidthChangeRef.current(clamped)
