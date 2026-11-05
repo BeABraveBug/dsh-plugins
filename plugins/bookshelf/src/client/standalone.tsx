@@ -17,5 +17,6 @@ function translate(key: string, params?: Record<string, string | number>): strin
 
 const root = document.getElementById('bookshelf-root')
 if (root !== null) {
-  createRoot(root).render(h(BookshelfApp, { t: translate, api: createBookshelfApi() }))
+  const initialBookId = new URLSearchParams(window.location.search).get('book') ?? undefined
+createRoot(root).render(h(BookshelfApp, { t: translate, api: createBookshelfApi(), initialBookId }))
 }

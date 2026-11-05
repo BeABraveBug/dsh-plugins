@@ -162,6 +162,7 @@ export class Library {
   private books: BookRecord[] = []
   private loaded = false
   private chain: Promise<unknown> = Promise.resolve()
+  private progressOwners = new Map<string, { clientId: string; startedAt: number }>()
 
   constructor(readonly filePath: string = defaultLibraryPath()) {}
 
@@ -433,7 +434,7 @@ export class Library {
   }
 
   /** Save a reading position and display percentage; markedRead is untouched. */
-  async saveProgress(id: string, position: ReadingPosition, percent: number): Promise<BookRecord> {
+  async saveProgress(id: string, position: ReadingPosition, percent: number, clientId?: string, clientStartedAt?: number): Promise<BookRecord> {
     if (!isReadingPosition(position)) throw new BookshelfError('bookshelf/invalid-position', '阅读位置无效。')
     if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
       throw new BookshelfError('bookshelf/invalid-percent', '阅读进度无效。')
@@ -441,6 +442,13 @@ export class Library {
     return this.mutate((draft) => {
       const book = draft.find((entry) => entry.id === id)
       if (book === undefined) throw new BookshelfError('bookshelf/not-found', '书目不存在。')
+      if (clientId !== undefined && clientStartedAt !== undefined) {
+        const owner = this.progressOwners.get(id)
+        if (owner !== undefined && (owner.startedAt > clientStartedAt || (owner.startedAt === clientStartedAt && owner.clientId > clientId))) {
+          throw new BookshelfError('bookshelf/stale-progress', '另一个阅读窗口的位置更新较新，已忽略旧位置。')
+        }
+        this.progressOwners.set(id, { clientId, startedAt: clientStartedAt })
+      }
       book.progress = { position: structuredClone(position), percent, updatedAt: Date.now() }
       book.lastOpenedAt = Date.now()
       return structuredClone(book)

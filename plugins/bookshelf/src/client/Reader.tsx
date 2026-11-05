@@ -11,6 +11,9 @@ import { NoteSidebar } from './NoteSidebar.tsx'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
+const CLIENT_ID = crypto.randomUUID()
+const CLIENT_STARTED_AT = Date.now()
+
 interface ReaderProps {
   readonly book: BookView
   readonly api: BookshelfApi
@@ -47,7 +50,7 @@ function useProgressSaver(bookId: string, api: BookshelfApi, onSaved: (record: B
       setState('saving')
       setError(null)
       try {
-        const record = await apiRef.current.saveProgress(bookId, next.position, next.percent)
+        const record = await apiRef.current.saveProgress(bookId, next.position, next.percent, CLIENT_ID, CLIENT_STARTED_AT)
         onSavedRef.current(record)
         setState('saved')
         return true
@@ -217,6 +220,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
                   : ''}
           </span>
           {saver.state === 'error' && <button type="button" className="bs-button" onClick={() => { void saver.flush() }}>{t('saveRetry')}</button>}
+          <button type="button" className="bs-button" onClick={() => window.open(`/api/bookshelf/standalone?book=${encodeURIComponent(book.id)}`, '_blank', 'noopener')}>{t('standalonePage')}</button>
           <button type="button" className="bs-button" onClick={() => { void toggleFullscreen() }}>{fullscreen ? t('exitFullscreen') : t('enterFullscreen')}</button>
           <button type="button" className={`bs-button ${notesOpen ? 'bs-button-primary' : ''}`} onClick={() => { void toggleNotes() }}>
             {t('notes')}

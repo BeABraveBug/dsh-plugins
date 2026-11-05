@@ -11,6 +11,7 @@ import { BookOpenIcon, BookshelfIcon, CheckIcon, PlusIcon, SearchIcon, TrashIcon
 interface BookshelfAppProps {
   readonly t: Translate
   readonly api: BookshelfApi
+  readonly initialBookId?: string
 }
 
 const SHELF_PAGE_SIZE = 12
@@ -59,7 +60,7 @@ function sortBooks(books: readonly BookView[]): BookView[] {
   })
 }
 
-export function BookshelfApp({ t, api }: BookshelfAppProps) {
+export function BookshelfApp({ t, api, initialBookId }: BookshelfAppProps) {
   const [books, setBooks] = useState<BookView[]>([])
   const [libraryPath, setLibraryPath] = useState<string>('')
   const [loading, setLoading] = useState(true)
@@ -76,6 +77,7 @@ export function BookshelfApp({ t, api }: BookshelfAppProps) {
   const toastKey = useRef(0)
   const listRequest = useRef(0)
   const contentRef = useRef<HTMLDivElement>(null)
+  const initialBookHandled = useRef(false)
 
   const notify = useCallback((kind: 'info' | 'error', text: string) => {
     toastKey.current += 1
@@ -101,6 +103,11 @@ export function BookshelfApp({ t, api }: BookshelfAppProps) {
   }, [api])
 
   useEffect(() => { void refresh(true) }, [refresh])
+  useEffect(() => {
+    if (initialBookId === undefined || initialBookHandled.current || books.length === 0) return
+    initialBookHandled.current = true
+    if (books.some((book) => book.id === initialBookId)) setReaderId(initialBookId)
+  }, [books, initialBookId])
   useEffect(() => {
     const onOnline = () => { void refresh(false) }
     window.addEventListener('online', onOnline)

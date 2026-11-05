@@ -89,7 +89,7 @@ async function dispatch(library: Library, notes: NoteStore, conversations: Conve
     }
     case 'saveProgress': {
       if (typeof request.id !== 'string' || request.id === '') return failure('bookshelf/bad-request', '书目 id 无效。')
-      return { ok: true, value: await library.saveProgress(request.id, request.position, request.percent) }
+      return { ok: true, value: await library.saveProgress(request.id, request.position, request.percent, typeof request.clientId === 'string' ? request.clientId : undefined, typeof request.clientStartedAt === 'number' ? request.clientStartedAt : undefined) }
     }
     case 'saveReaderWidth': {
       if (typeof request.id !== 'string' || request.id === '') return failure('bookshelf/bad-request', '书目 id 无效。')

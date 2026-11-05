@@ -59,7 +59,7 @@ export interface BookshelfApi {
   addPaths(paths: readonly string[]): Promise<AddResult>
   addDirectory(path: string): Promise<AddResult & { directory?: string }>
   open(id: string): Promise<BookRecord>
-  saveProgress(id: string, position: ReadingPosition, percent: number): Promise<BookRecord>
+  saveProgress(id: string, position: ReadingPosition, percent: number, clientId?: string, clientStartedAt?: number): Promise<BookRecord>
   saveReaderWidth(id: string, width: number): Promise<BookRecord>
   setRead(id: string, markedRead: boolean): Promise<BookRecord>
   remove(id: string): Promise<{ removed: boolean }>
@@ -118,7 +118,7 @@ export function createBookshelfApi(): BookshelfApi {
     addPaths: (paths) => rpc({ op: 'addPaths', paths: [...paths] }),
     addDirectory: (path) => rpc({ op: 'addDirectory', path }),
     open: (id) => rpc({ op: 'open', id }),
-    saveProgress: (id, position, percent) => rpc({ op: 'saveProgress', id, position, percent }),
+    saveProgress: (id, position, percent, clientId, clientStartedAt) => rpc({ op: 'saveProgress', id, position, percent, clientId, clientStartedAt }),
     saveReaderWidth: (id, width) => rpc({ op: 'saveReaderWidth', id, width }),
     setRead: (id, markedRead) => rpc({ op: 'setRead', id, markedRead }),
     remove: (id) => rpc({ op: 'remove', id }),

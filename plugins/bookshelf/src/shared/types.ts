@@ -200,7 +200,7 @@ export type RpcRequest =
   | { readonly op: 'addPaths'; readonly paths: readonly string[] }
   | { readonly op: 'addDirectory'; readonly path: string }
   | { readonly op: 'open'; readonly id: string }
-  | { readonly op: 'saveProgress'; readonly id: string; readonly position: ReadingPosition; readonly percent: number }
+  | { readonly op: 'saveProgress'; readonly id: string; readonly position: ReadingPosition; readonly percent: number; readonly clientId?: string; readonly clientStartedAt?: number }
   | { readonly op: 'saveReaderWidth'; readonly id: string; readonly width: number }
   | { readonly op: 'setRead'; readonly id: string; readonly markedRead: boolean }
   | { readonly op: 'remove'; readonly id: string }
