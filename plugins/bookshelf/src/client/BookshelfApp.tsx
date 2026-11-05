@@ -4,6 +4,7 @@ import { BookshelfApiError, type BookshelfApi } from './api.ts'
 import type { Translate } from './i18n.ts'
 import { AddDialog, type AddMode } from './AddDialog.tsx'
 import { NotesManager } from './NotesManager.tsx'
+import { publishHostTheme } from './themeBridge.ts'
 import { Reader } from './Reader.tsx'
 import { BookCover } from './BookCover.tsx'
 import { BookOpenIcon, BookshelfIcon, CheckIcon, PlusIcon, SearchIcon, TrashIcon, WarningIcon } from './icons.tsx'
@@ -102,13 +103,14 @@ export function BookshelfApp({ t, api, initialBookId }: BookshelfAppProps) {
     }
   }, [api])
 
+  useEffect(() => publishHostTheme(), [])
   useEffect(() => { void refresh(true) }, [refresh])
   useEffect(() => {
-    if (initialBookId === undefined || initialBookHandled.current || books.length === 0) return
+    if (initialBookId === undefined || initialBookHandled.current || loading) return
     initialBookHandled.current = true
     if (books.some((book) => book.id === initialBookId)) setReaderId(initialBookId)
     else notify('error', t('initialBookMissing'))
-  }, [books, initialBookId, notify, t])
+  }, [books, initialBookId, loading, notify, t])
   useEffect(() => {
     const onOnline = () => { void refresh(false) }
     window.addEventListener('online', onOnline)

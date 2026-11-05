@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { createBookshelfApi } from './api.ts'
 import { BookshelfApp } from './BookshelfApp.tsx'
 import { DICT_EN, DICT_ZH } from './i18n.ts'
+import { applyStoredTheme, publishHostTheme, subscribeStoredTheme } from './themeBridge.ts'
 import './styles/app.css'
 import './standalone.css'
 
@@ -17,6 +18,9 @@ function translate(key: string, params?: Record<string, string | number>): strin
 
 const root = document.getElementById('bookshelf-root')
 if (root !== null) {
-  const initialBookId = new URLSearchParams(window.location.search).get('book') ?? undefined
+  applyStoredTheme()
+subscribeStoredTheme()
+publishHostTheme()
+const initialBookId = new URLSearchParams(window.location.search).get('book') ?? undefined
 createRoot(root).render(h(BookshelfApp, { t: translate, api: createBookshelfApi(), initialBookId }))
 }

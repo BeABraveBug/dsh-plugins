@@ -67,7 +67,8 @@ function useProgressSaver(bookId: string, api: BookshelfApi, onSaved: (record: B
   }, [bookId])
 
   const report = useCallback((position: ReadingPosition, percent: number) => {
-    pending.current = { position, percent, activityAt: Date.now() }
+    const active = document.visibilityState === 'visible' && document.hasFocus()
+    pending.current = { position, percent, activityAt: active ? Date.now() : (pending.current?.activityAt ?? 0) }
     if (timer.current !== null) clearTimeout(timer.current)
     timer.current = setTimeout(() => { void flush() }, 700)
   }, [flush])
