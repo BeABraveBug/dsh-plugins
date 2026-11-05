@@ -1051,3 +1051,7 @@
 
 .bs-reader:fullscreen { background: var(--dsw-alias-bg-base); }
 .bs-reader:fullscreen .bs-reader-header { background: var(--dsw-alias-bg-base); }
+
+.bs-markdown .katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+.bs-mermaid { margin: 1em 0; overflow-x: auto; text-align: center; }
+.bs-mermaid svg { max-width: 100%; height: auto; }

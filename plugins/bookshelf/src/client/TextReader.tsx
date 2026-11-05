@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { BookView, ReaderTextContext, ScrollPosition } from '../shared/types.ts'
 import type { Translate } from './i18n.ts'
-import { renderMarkdown } from './markdown.ts'
+import { renderMarkdown, renderMermaid } from './markdown.ts'
 
 interface TextReaderProps {
   readonly book: BookView
@@ -19,6 +19,7 @@ function messageOf(error: unknown): string {
 
 export function TextReader({ book, initialPosition, fetchText, onProgress, onContext, t }: TextReaderProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const articleRef = useRef<HTMLDivElement>(null)
   const onProgressRef = useRef(onProgress)
   const onContextRef = useRef(onContext)
   onProgressRef.current = onProgress
@@ -46,6 +47,10 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
   }, [book.id, fetchText])
 
   const html = useMemo(() => (book.format === 'markdown' && text !== null ? renderMarkdown(text) : null), [book.format, text])
+
+  useEffect(() => {
+    if (html !== null) void renderMermaid(articleRef.current)
+  }, [html])
 
   useEffect(() => {
     if (text === null || restoredRef.current) return
@@ -94,7 +99,7 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
   return (
     <div ref={scrollRef} className="bs-text-scroll" onScroll={handleScroll} onMouseUp={handleSelection}>
       {html !== null
-        ? <article className="bs-markdown" dangerouslySetInnerHTML={{ __html: html }} />
+        ? <article ref={articleRef} className="bs-markdown" dangerouslySetInnerHTML={{ __html: html }} />
         : <pre className="bs-plain-text">{text}</pre>}
     </div>
   )

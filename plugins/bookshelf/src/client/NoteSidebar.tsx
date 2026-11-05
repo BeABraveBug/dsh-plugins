@@ -4,7 +4,7 @@ import type { AiModelCatalog, AiSelection, BookNote, BookView, ReaderScreenshot,
 import type { BookshelfApi } from './api.ts'
 import type { Translate } from './i18n.ts'
 import { CloseIcon, MoreIcon, PlusIcon, SendIcon, TrashIcon } from './icons.tsx'
-import { renderMarkdown } from './markdown.ts'
+import { renderMarkdown, renderMermaid } from './markdown.ts'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 type SidebarTab = 'notes' | 'qa'
@@ -47,6 +47,7 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
   const [title, setTitle] = useState('')
   const [markdown, setMarkdown] = useState('')
   const [preview, setPreview] = useState(false)
+  const previewRef = useRef<HTMLDivElement>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -320,6 +321,10 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
   }, [flush, flushRef])
 
   const previewHtml = useMemo(() => preview ? renderMarkdown(markdown) : '', [markdown, preview])
+
+  useEffect(() => {
+    if (preview && previewRef.current !== null) void renderMermaid(previewRef.current)
+  }, [preview, previewHtml])
   const renderedAnswers = useMemo(
     () => messages.map((message) => message.role === 'assistant' ? renderMarkdown(message.content) : ''),
     [messages],
@@ -399,7 +404,7 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
             <article className="bs-note-document">
               <input className="bs-note-title-input" value={title} onChange={(event) => { setTitle(event.target.value); changed() }} placeholder={t('noteTitle')} aria-label={t('noteTitle')} />
               {preview
-                ? <div className="bs-note-preview bs-markdown" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                ? <div ref={previewRef} className="bs-note-preview bs-markdown" dangerouslySetInnerHTML={{ __html: previewHtml }} />
                 : <textarea className="bs-note-textarea" value={markdown} onChange={(event) => { setMarkdown(event.target.value); changed() }} placeholder={t('notePlaceholder')} aria-label={t('notePlaceholder')} />}
             </article>
           )}

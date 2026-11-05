@@ -50,7 +50,9 @@ function cssChannel(id: string) {
     name: 'bookshelf-css',
     resolveId(source: string, importer: string | undefined) {
       if (!source.endsWith('.css')) return null
-      const file = importer === undefined ? source : resolve(dirname(importer), source)
+      const file = source.startsWith('.') || source.startsWith('/')
+        ? (importer === undefined ? source : resolve(dirname(importer), source))
+        : requireFromPackage.resolve(source)
       return CSS_PREFIX + file + CSS_SUFFIX
     },
     load(this: { addWatchFile(file: string): void }, virtualId: string) {
