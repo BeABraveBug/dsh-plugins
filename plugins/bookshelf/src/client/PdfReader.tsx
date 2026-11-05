@@ -28,7 +28,7 @@ function clampPage(value: number, total: number): number {
 
 function cleanPdfText(raw: string): string {
   let text = raw.replace(/\r\n?/g, '\n').replace(/[ \t]+/g, ' ')
-  text = text.replace(/\s*([，。；：！？、])\s*/g, '$1')
+  text = text.replace(/[ \t]*([，。；：！？、])[ \t]*/g, '$1')
   text = text.replace(/([\u4e00-\u9fff])[ \t]+(?=[\u4e00-\u9fff])/g, '$1')
   text = text.replace(/([\u4e00-\u9fff])[ \t]+(?=[0-9A-Za-z])/g, '$1')
   text = text.replace(/([0-9A-Za-z])[ \t]+(?=[\u4e00-\u9fff])/g, '$1')
@@ -121,8 +121,8 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
     }
   }, [book.id, fetchBytes])
 
-  const emitContext = useCallback((text: string) => {
-    const trimmed = cleanPdfText(text)
+  const emitContext = useCallback((text: string, keepRaw = false) => {
+    const trimmed = keepRaw ? text.trim() : cleanPdfText(text)
     if (trimmed === '') {
       onContextRef.current(null)
       return
@@ -141,17 +141,16 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
 
   const handleSelection = useCallback(() => {
     const selection = window.getSelection()
-    if (selection === null || selection.anchorNode === null || !textLayerRef.current?.contains(selection.anchorNode)) return
-    const selected = selection?.toString().trim() ?? ''
-    emitContext(selected === '' ? pageTextRef.current : selected)
+    const layer = textLayerRef.current
+    if (selection === null || selection.rangeCount === 0 || layer === null) return
+    const range = selection.getRangeAt(0)
+    if (!layer.contains(range.startContainer) || !layer.contains(range.endContainer)) return
+    const selected = selection.toString().trim()
+    emitContext(selected === '' ? pageTextRef.current : selected, selected !== '')
   }, [emitContext])
 
   useEffect(() => {
-    const onSelectionChange = () => {
-      const selection = window.getSelection()
-      if (selection === null || selection.anchorNode === null || !textLayerRef.current?.contains(selection.anchorNode)) return
-      handleSelection()
-    }
+    const onSelectionChange = () => { handleSelection() }
     document.addEventListener('selectionchange', onSelectionChange)
     return () => document.removeEventListener('selectionchange', onSelectionChange)
   }, [handleSelection])

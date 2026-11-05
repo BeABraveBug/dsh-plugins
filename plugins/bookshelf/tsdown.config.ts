@@ -14,14 +14,16 @@ const PLATFORM_MODULES = new Set(['react', 'react/jsx-runtime', 'react-dom'])
 const isPlatformModule = (specifier: string): boolean => PLATFORM_MODULES.has(specifier)
 
 const PDFJS_DIR = dirname(requireFromPackage.resolve('pdfjs-dist/package.json'))
+const KATEX_DIR = dirname(requireFromPackage.resolve('katex/package.json'))
 const NODE_ENV = process.env.NODE_ENV ?? 'production'
 const WATCH = process.env.BOOKSHELF_WATCH === '1'
 const CSS_PREFIX = '\0bookshelf-css:'
 const CSS_SUFFIX = '.mjs'
 
 function styleModule(id: string, file: string, css: string): string {
+  const rewritten = css.replace(/url\(fonts\//g, 'url(/api/bookshelf/katex/fonts/')
   return [
-    `const css = ${JSON.stringify(css)};`,
+    `const css = ${JSON.stringify(rewritten)};`,
     `const tagId = ${JSON.stringify(`${id}/${file}`)};`,
     "if (typeof document !== 'undefined') {",
     "  const selector = 'style[data-plugin-css=' + JSON.stringify(tagId) + ']';",
@@ -34,6 +36,13 @@ function styleModule(id: string, file: string, css: string): string {
     '}',
     'export {};',
   ].join('\n')
+}
+
+function copyKatexAssets(): void {
+  const target = resolve('lib/katex/fonts')
+  rmSync(resolve('lib/katex'), { recursive: true, force: true })
+  mkdirSync(target, { recursive: true })
+  cpSync(join(KATEX_DIR, 'dist/fonts'), target, { recursive: true })
 }
 
 function copyPdfjsAssets(): void {
@@ -95,7 +104,7 @@ export default defineConfig([
     sourcemap: false,
     dts: !WATCH,
     clean: true,
-    onSuccess: copyPdfjsAssets,
+    onSuccess: () => { copyPdfjsAssets(); copyKatexAssets() },
     outputOptions: { comments: { legal: true, annotation: false, jsdoc: false } },
     deps: {
       neverBundle: (specifier: string) => isBuiltin(specifier) || specifier.startsWith('node:'),
@@ -124,6 +133,8 @@ export default defineConfig([
     },
     plugins: [rawChannel(), cssChannel(pkg.name)],
     outputOptions: {
+      // DSH loads one registered factory; relative CommonJS chunks are not modules.
+      codeSplitting: false,
       comments: { legal: true, annotation: false, jsdoc: false },
       entryFileNames: 'client.js',
       banner: `window.__ModuleLoader__.load({ id: ${JSON.stringify(pkg.name)}, factory: (require) => {`,
@@ -151,6 +162,7 @@ export default defineConfig([
     deps: { alwaysBundle: () => true },
     plugins: [rawChannel(), cssChannel(pkg.name)],
     outputOptions: {
+      codeSplitting: false,
       comments: { legal: true, annotation: false, jsdoc: false },
       entryFileNames: 'standalone.js',
     },

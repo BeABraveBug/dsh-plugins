@@ -21,6 +21,7 @@
     "lib/client.js",
     "lib/standalone.js",
     "lib/pdfjs/**",
+    "lib/katex/**",
     "cordis.patch.yml",
     "locale/*.json",
     "README.md",
@@ -74,7 +75,7 @@
     "build": "tsdown",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "check": "pnpm run typecheck && pnpm run test && pnpm run build"
+    "check": "pnpm run typecheck && pnpm run test && pnpm run build && node tests/client-bundle-smoke.mjs"
   },
   "icon": "icon.svg"
 }
