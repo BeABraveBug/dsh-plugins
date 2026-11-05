@@ -1,11 +1,27 @@
 import { marked } from 'marked'
 import markedKatex from 'marked-katex-extension'
 import mermaid from 'mermaid'
-import DOMPurify from 'dompurify'
+import createDOMPurify from 'dompurify'
 import 'katex/dist/katex.min.css'
 
+const purifier = typeof window === 'undefined'
+  ? null
+  : (typeof (createDOMPurify as unknown as { sanitize?: unknown }).sanitize === 'function'
+      ? createDOMPurify as unknown as { sanitize: (html: string, options?: Record<string, unknown>) => string; addHook: (name: string, hook: (node: Element, data: { attrName: string; keepAttr: boolean }) => void) => void }
+      : (createDOMPurify as unknown as (window: Window) => { sanitize: (html: string, options?: Record<string, unknown>) => string; addHook: (name: string, hook: (node: Element, data: { attrName: string; keepAttr: boolean }) => void) => void })(window))
+
+if (typeof purifier?.addHook === 'function') {
+  purifier.addHook('uponSanitizeAttribute', (node, data) => {
+    if (data.attrName === 'style' && !(node as Element).closest?.('.katex')) data.keepAttr = false
+  })
+}
+
+function sanitize(html: string, options: Record<string, unknown>): string {
+  return purifier === null ? html : purifier.sanitize(html, options)
+}
+
 marked.use(markedKatex({ throwOnError: false, output: 'html', nonStandard: true }))
-mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', flowchart: { htmlLabels: false }, class: { htmlLabels: false } })
+mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', htmlLabels: false, flowchart: { htmlLabels: false }, class: { htmlLabels: false } })
 
 
 let mermaidSequence = 0
@@ -14,7 +30,7 @@ let mermaidSequence = 0
 export function renderMarkdown(source: string): string {
   const parsed = marked.parse(source, { async: false, gfm: true, breaks: false })
   const html = typeof parsed === 'string' ? parsed : ''
-  return DOMPurify.sanitize(html, {
+  return sanitize(html, {
     USE_PROFILES: { html: true, svg: true, svgFilters: true },
     FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form'],
     FORBID_ATTR: [],
@@ -34,7 +50,7 @@ export async function renderMermaid(container: HTMLElement | null): Promise<void
       const { svg } = await mermaid.render(id, source)
       const figure = document.createElement('div')
       figure.className = 'bs-mermaid'
-      figure.innerHTML = DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true, html: true }, FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form'] })
+      figure.innerHTML = sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true, html: true }, FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form'] })
       code.parentElement?.replaceWith(figure)
     } catch {
       for (const leftover of [document.getElementById(id), document.getElementById(`d${id}`)]) leftover?.remove()

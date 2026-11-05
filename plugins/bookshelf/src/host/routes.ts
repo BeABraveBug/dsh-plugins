@@ -33,7 +33,7 @@ export const COVER_PATH = '/api/bookshelf/cover'
 export const PDFJS_ASSET_PATH = '/api/bookshelf/pdfjs'
 export const STANDALONE_PATH = '/api/bookshelf/standalone'
 export const STANDALONE_ASSET_PATH = '/api/bookshelf/standalone.js'
-export const KATEX_FONT_PATH = '/api/bookshelf/katex/fonts'
+export const KATEX_FONT_PATH = '/api/bookshelf/katex-font'
 
 function json(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), {
@@ -264,7 +264,8 @@ const PDFJS_ASSET_TYPES: Record<string, { directory: string; extensions: Readonl
 
 export async function createKatexFontHandler(fontRoot: string, request: Request): Promise<Response> {
   const url = new URL(request.url)
-  const name = basename(url.pathname)
+  const rawName = url.searchParams.get('name')
+  const name = rawName === null ? '' : basename(rawName)
   if (name === '' || name.includes('..') || !['.woff2', '.woff', '.ttf'].includes(extname(name).toLowerCase())) return new Response(null, { status: 400 })
   let bytes: Buffer
   try { bytes = await readFile(resolve(fontRoot, name)) } catch { return new Response(null, { status: 404 }) }
@@ -397,7 +398,7 @@ export function registerRoutes(ctx: RouteContext, library: Library): void {
     }), 'bookshelf: standalone route')
     const katexRoot = fileURLToPath(new URL('./katex/fonts', import.meta.url))
     injected.effect(() => register({
-      path: KATEX_FONT_PATH + '/',
+      path: KATEX_FONT_PATH,
       methods: ['GET', 'HEAD'],
       requestBody: 'buffered',
       fetch: (request) => createKatexFontHandler(katexRoot, request),

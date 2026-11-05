@@ -21,7 +21,7 @@ const CSS_PREFIX = '\0bookshelf-css:'
 const CSS_SUFFIX = '.mjs'
 
 function styleModule(id: string, file: string, css: string): string {
-  const rewritten = css.replace(/url\(fonts\//g, 'url(/api/bookshelf/katex/fonts/')
+  const rewritten = css.replace(/url\(fonts\/([^)]+)\)/g, 'url(/api/bookshelf/katex-font?name=$1)')
   return [
     `const css = ${JSON.stringify(rewritten)};`,
     `const tagId = ${JSON.stringify(`${id}/${file}`)};`,
