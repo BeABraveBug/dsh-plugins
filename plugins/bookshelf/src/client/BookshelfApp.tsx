@@ -412,7 +412,7 @@ export function BookshelfApp({ t, api, initialBookId }: BookshelfAppProps) {
                           const details = event.currentTarget
                           if (!details.open) {
                             if (openMenuRef.current === details) openMenuRef.current = null
-                            if (menuPosition?.id === book.id) setMenuPosition(null)
+                            setMenuPosition((current) => current?.id === book.id ? null : current)
                             return
                           }
                           const previous = openMenuRef.current
