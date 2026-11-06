@@ -72,6 +72,7 @@ export function BookshelfApp({ t, api, initialBookId }: BookshelfAppProps) {
   const [notesOpen, setNotesOpen] = useState(false)
   const [detailBook, setDetailBook] = useState<BookView | null>(null)
   const [menuPosition, setMenuPosition] = useState<{ id: string; left: number; top: number } | null>(null)
+  const openMenuRef = useRef<HTMLDetailsElement | null>(null)
   const [readerId, setReaderId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<BookView | null>(null)
@@ -408,8 +409,16 @@ export function BookshelfApp({ t, api, initialBookId }: BookshelfAppProps) {
                         </span>
                       </button>
                       <details className="bs-book-more" onToggle={(event) => {
-                          if (!event.currentTarget.open) { if (menuPosition?.id === book.id) setMenuPosition(null); return }
-                          const rect = event.currentTarget.getBoundingClientRect()
+                          const details = event.currentTarget
+                          if (!details.open) {
+                            if (openMenuRef.current === details) openMenuRef.current = null
+                            if (menuPosition?.id === book.id) setMenuPosition(null)
+                            return
+                          }
+                          const previous = openMenuRef.current
+                          if (previous !== null && previous !== details) previous.open = false
+                          openMenuRef.current = details
+                          const rect = details.getBoundingClientRect()
                           setMenuPosition({ id: book.id, left: Math.max(8, Math.min(rect.left, window.innerWidth - 238)), top: rect.bottom + 4 })
                         }}>
                         <summary aria-label={t('moreActions')}>⋯</summary>
