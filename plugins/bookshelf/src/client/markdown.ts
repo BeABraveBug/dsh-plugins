@@ -8,8 +8,8 @@ type Purifier = { sanitize: (html: string, options?: Record<string, unknown>) =>
 
 function makePurifier(): Purifier | null {
   if (typeof window === 'undefined') return null
-  const candidate = createDOMPurify as unknown as Purifier
-  return typeof candidate.sanitize === 'function' ? candidate : (createDOMPurify as unknown as (window: Window) => Purifier)(window)
+  if (typeof createDOMPurify === 'function') return (createDOMPurify as unknown as (window: Window) => Purifier)(window)
+  return createDOMPurify as unknown as Purifier
 }
 
 const purifier = makePurifier()
