@@ -5,6 +5,7 @@ import type { BookView, EpubPosition, ReaderTextContext } from '../shared/types.
 import type { Translate } from './i18n.ts'
 
 interface EpubReaderProps {
+  readonly jumpTarget?: { readonly key: number; readonly anchor: EpubPosition } | null
   readonly book: BookView
   readonly initialPosition: EpubPosition | null
   readonly fetchBytes: (id: string) => Promise<ArrayBuffer>
@@ -35,20 +36,28 @@ function epubFactory(): (input: ArrayBuffer) => Book {
   throw new Error('EPUB parser is unavailable')
 }
 
-export function EpubReader({ book, initialPosition, fetchBytes, onProgress, onContext, t }: EpubReaderProps) {
+export function EpubReader({ book, initialPosition, fetchBytes, onProgress, onContext, jumpTarget, t }: EpubReaderProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const onProgressRef = useRef(onProgress)
   const onContextRef = useRef(onContext)
   onProgressRef.current = onProgress
   onContextRef.current = onContext
   const initialRef = useRef(initialPosition)
+  const renditionRef = useRef<Rendition | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const target = jumpTarget
+    if (target === null || target === undefined) return
+    void renditionRef.current?.display(target.anchor.cfi).catch(() => undefined)
+  }, [jumpTarget?.key, loading])
 
   useEffect(() => {
     let disposed = false
     let epubBook: Book | null = null
     let rendition: Rendition | null = null
+    renditionRef.current = null
     let locationsReady = false
     let lastCfi = initialRef.current?.cfi ?? null
 
@@ -119,6 +128,7 @@ export function EpubReader({ book, initialPosition, fetchBytes, onProgress, onCo
           spread: 'none',
           allowScriptedContent: false,
         })
+        renditionRef.current = rendition
         const events = rendition as unknown as RenditionEvents
         events.on('relocated', (location) => {
           report(location.start.cfi, location.start.percentage)
@@ -149,6 +159,7 @@ export function EpubReader({ book, initialPosition, fetchBytes, onProgress, onCo
       disposed = true
       try { rendition?.destroy() } catch {}
       try { epubBook?.destroy() } catch {}
+      renditionRef.current = null
       rendition = null
       epubBook = null
     }

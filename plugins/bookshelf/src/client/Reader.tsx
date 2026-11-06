@@ -139,6 +139,8 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
   }, [notesOpen, notesWidth])
   const [fullscreen, setFullscreen] = useState(false)
   const [readerContext, setReaderContext] = useState<ReaderTextContext | null>(null)
+  const [jumpTarget, setJumpTarget] = useState<{ key: number; anchor: ReadingPosition } | null>(null)
+  const jumpKeyRef = useRef(0)
   const [screenshot, setScreenshot] = useState<ReaderScreenshot | null>(null)
 
   useEffect(() => {
@@ -261,6 +263,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
                 onProgress={onProgress}
                 onContext={setReaderContext}
                 onScreenshot={setScreenshot}
+                jumpTarget={jumpTarget !== null && jumpTarget.anchor.kind === 'pdf' ? { key: jumpTarget.key, anchor: jumpTarget.anchor } : null}
                 t={t}
               />
             )}
@@ -268,6 +271,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
               <EpubReader
                 book={book}
                 initialPosition={book.progress.position?.kind === 'epub' ? book.progress.position : null}
+                jumpTarget={jumpTarget !== null && jumpTarget.anchor.kind === 'epub' ? { key: jumpTarget.key, anchor: jumpTarget.anchor } : null}
                 fetchBytes={api.fileBytes}
                 onProgress={onProgress}
                 onContext={setReaderContext}
@@ -278,6 +282,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
               <TextReader
                 book={book}
                 initialPosition={book.progress.position?.kind === 'scroll' ? book.progress.position : null}
+                jumpTarget={jumpTarget !== null && jumpTarget.anchor.kind === 'scroll' ? { key: jumpTarget.key, anchor: jumpTarget.anchor } : null}
                 fetchText={api.fileText}
                 onProgress={onProgress}
                 onContext={setReaderContext}
@@ -291,7 +296,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
             <div className="bs-note-resizer" onPointerDown={startResize} role="separator" aria-orientation="vertical" aria-label={t('resizeNotes')} />
             <div className="bs-note-pane" style={{ width: notesWidth }}>
               <NoteSidebar book={book} api={api} t={t} context={readerContext} screenshot={screenshot} onClearScreenshot={() => setScreenshot(null)}
-                onClearContext={() => setReaderContext(null)} onClose={() => setNotesOpen(false)} flushRef={noteFlushRef} />
+                onClearContext={() => setReaderContext(null)} onJump={(anchor) => { jumpKeyRef.current += 1; setJumpTarget({ key: jumpKeyRef.current, anchor }) }} onClose={() => setNotesOpen(false)} flushRef={noteFlushRef} />
             </div>
           </>
         )}

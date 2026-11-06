@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { MutableRefObject } from 'react'
-import type { AiModelCatalog, AiSelection, BookNote, BookView, ReaderScreenshot, ReaderTextContext } from '../shared/types.ts'
+import type { AiModelCatalog, AiSelection, BookNote, BookView, ReaderScreenshot, ReaderTextContext, ReadingPosition } from '../shared/types.ts'
 import type { BookshelfApi } from './api.ts'
 import type { Translate } from './i18n.ts'
 import { CloseIcon, MoreIcon, PlusIcon, SendIcon, TrashIcon } from './icons.tsx'
@@ -23,6 +23,7 @@ interface NoteSidebarProps {
   readonly screenshot: ReaderScreenshot | null
   readonly onClearScreenshot: () => void
   readonly onClearContext: () => void
+  readonly onJump: (anchor: ReadingPosition) => void
   readonly onClose: () => void
   readonly flushRef?: MutableRefObject<(() => Promise<boolean>) | null>
 }
@@ -40,7 +41,7 @@ function contextRangeLabel(context: ReaderTextContext, t: Translate): string {
 }
 
 /** Side panel with per-book Markdown notes and current-context Q&A. */
-export function NoteSidebar({ book, api, t, context, screenshot, onClearScreenshot, onClearContext, onClose, flushRef }: NoteSidebarProps) {
+export function NoteSidebar({ book, api, t, context, screenshot, onClearScreenshot, onClearContext, onJump, onClose, flushRef }: NoteSidebarProps) {
   const [tab, setTab] = useState<SidebarTab>('notes')
   const [notes, setNotes] = useState<BookNote[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -367,6 +368,9 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
           <div className="bs-note-actions">
             {selected !== null && (
               <button type="button" className="bs-note-action" onClick={() => setPreview((current) => !current)} disabled={busy}>{preview ? t('editNote') : t('previewNote')}</button>
+            )}
+            {selected?.anchor !== null && selected?.anchor !== undefined && (
+              <button type="button" className="bs-note-action" onClick={() => onJump(selected.anchor as ReadingPosition)} disabled={busy}>{t('goToAnchor')}</button>
             )}
             <button type="button" className="bs-note-action bs-note-action-icon" aria-label={t('newNote')} title={t('newNote')} onClick={() => { void createNote() }} disabled={busy || loading}><PlusIcon size={16} /></button>
             {selected !== null && (

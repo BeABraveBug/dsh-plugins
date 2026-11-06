@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
 import { ensurePdfWorker, pdfjsLib } from './pdf.ts'
-import type { BookView, PdfPosition, ReaderScreenshot, ReaderTextContext } from '../shared/types.ts'
+import type { BookView, PdfPosition, ReaderScreenshot, ReaderTextContext, ReadingPosition } from '../shared/types.ts'
 import type { Translate } from './i18n.ts'
 import { pdfjsAssetUrl } from './api.ts'
 import { ChevronLeftIcon, ChevronRightIcon } from './icons.tsx'
 
 interface PdfReaderProps {
+  readonly jumpTarget?: { readonly key: number; readonly anchor: ReadingPosition } | null
   readonly book: BookView
   readonly initialPosition: PdfPosition | null
   readonly initialWidth: number | null
@@ -36,7 +37,7 @@ function cleanPdfText(raw: string): string {
   return text.replace(/\n{3,}/g, '\n\n').trim()
 }
 
-export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, fetchBytes, onProgress, onContext, onScreenshot, t }: PdfReaderProps) {
+export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, fetchBytes, onProgress, onContext, onScreenshot, jumpTarget, t }: PdfReaderProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const textLayerRef = useRef<HTMLDivElement>(null)
@@ -292,6 +293,24 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
       renderingRef.current = false
     }
   }, [containerWidth, emitContext, loading, page, report, zoom])
+
+  useEffect(() => {
+    const target = jumpTarget
+    if (target === null || target === undefined || target.anchor.kind !== 'pdf') return
+    const anchor = target.anchor
+    const scroller = scrollRef.current
+    if (anchor.page === pageRef.current) {
+      if (scroller !== null) {
+        const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight)
+        scroller.scrollTop = anchor.offset * max
+      }
+      return
+    }
+    restoreRef.current = anchor.offset
+    goTo(anchor.page)
+    // goTo is stable for the target page; key changes only on an explicit note jump.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jumpTarget?.key])
 
   useEffect(() => { setPageInput(String(page)) }, [page])
 

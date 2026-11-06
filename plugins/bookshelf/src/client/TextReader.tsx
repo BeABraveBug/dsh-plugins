@@ -4,6 +4,7 @@ import type { Translate } from './i18n.ts'
 import { renderMarkdown, renderMermaid } from './markdown.ts'
 
 interface TextReaderProps {
+  readonly jumpTarget?: { readonly key: number; readonly anchor: ScrollPosition } | null
   readonly book: BookView
   readonly initialPosition: ScrollPosition | null
   readonly fetchText: (id: string) => Promise<string>
@@ -17,7 +18,7 @@ function messageOf(error: unknown): string {
 }
 
 
-export function TextReader({ book, initialPosition, fetchText, onProgress, onContext, t }: TextReaderProps) {
+export function TextReader({ book, initialPosition, fetchText, onProgress, onContext, jumpTarget, t }: TextReaderProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const articleRef = useRef<HTMLDivElement>(null)
   const onProgressRef = useRef(onProgress)
@@ -80,6 +81,14 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
       emitContext(selected, ratio, true)
     }
   }
+
+  useEffect(() => {
+    if (jumpTarget === null || jumpTarget === undefined) return
+    const scroller = scrollRef.current
+    if (scroller === null) return
+    const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight)
+    scroller.scrollTop = jumpTarget.anchor.ratio * max
+  }, [jumpTarget?.key, text])
 
   const handleScroll = () => {
     const scroller = scrollRef.current
