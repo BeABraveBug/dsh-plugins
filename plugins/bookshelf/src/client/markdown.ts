@@ -4,11 +4,16 @@ import mermaid from 'mermaid'
 import createDOMPurify from 'dompurify'
 import 'katex/dist/katex.min.css'
 
-const purifier = typeof window === 'undefined'
-  ? null
-  : (typeof (createDOMPurify as unknown as { sanitize?: unknown }).sanitize === 'function'
-      ? createDOMPurify as unknown as { sanitize: (html: string, options?: Record<string, unknown>) => string; addHook: (name: string, hook: (node: Element, data: { attrName: string; keepAttr: boolean }) => void) => void }
-      : (createDOMPurify as unknown as (window: Window) => { sanitize: (html: string, options?: Record<string, unknown>) => string; addHook: (name: string, hook: (node: Element, data: { attrName: string; keepAttr: boolean }) => void) => void })(window))
+type Purifier = { sanitize: (html: string, options?: Record<string, unknown>) => string; addHook: (name: string, hook: (node: Element, data: { attrName: string; keepAttr: boolean }) => void) => void }
+
+function makePurifier(): Purifier | null {
+  if (typeof window === 'undefined') return null
+  const candidate = createDOMPurify as unknown as Purifier
+  return typeof candidate.sanitize === 'function' ? candidate : (createDOMPurify as unknown as (window: Window) => Purifier)(window)
+}
+
+const purifier = makePurifier()
+const mermaidPurifier = makePurifier()
 
 if (typeof purifier?.addHook === 'function') {
   purifier.addHook('uponSanitizeAttribute', (node, data) => {
@@ -60,7 +65,7 @@ export async function renderMermaid(container: HTMLElement | null): Promise<void
       const { svg } = await mermaid.render(id, source)
       const figure = document.createElement('div')
       figure.className = 'bs-mermaid'
-      figure.innerHTML = sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true, html: true }, FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form'] })
+      figure.innerHTML = mermaidPurifier === null ? '' : mermaidPurifier.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true, html: true }, FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form'] })
       code.parentElement?.replaceWith(figure)
     } catch {
       for (const leftover of [document.getElementById(id), document.getElementById(`d${id}`)]) leftover?.remove()

@@ -1058,7 +1058,7 @@
 
 /* Cover-first shelf and immersive reading layout. */
 .bs-grid { grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 28px 24px; }
-.bs-book.is-cover-card { min-height: 0; padding: 0; border: 0; background: transparent; gap: 8px; }
+.bs-book.is-cover-card { position: relative; min-height: 0; padding: 0; border: 0; background: transparent; gap: 8px; }
 .bs-book.is-cover-card .bs-book-main { flex-direction: column; gap: 9px; }
 .bs-book.is-cover-card .bs-cover { width: 100%; height: 190px; border-radius: 8px; }
 .bs-book.is-cover-card .bs-book-text { gap: 5px; }
