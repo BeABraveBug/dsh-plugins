@@ -5,6 +5,7 @@ import { renderMarkdown, renderMermaid } from './markdown.ts'
 
 interface TextReaderProps {
   readonly jumpTarget?: { readonly key: number; readonly anchor: ScrollPosition } | null
+  readonly onJumpError?: (message: string) => void
   readonly book: BookView
   readonly initialPosition: ScrollPosition | null
   readonly fetchText: (id: string) => Promise<string>
@@ -18,7 +19,7 @@ function messageOf(error: unknown): string {
 }
 
 
-export function TextReader({ book, initialPosition, fetchText, onProgress, onContext, jumpTarget, t }: TextReaderProps) {
+export function TextReader({ book, initialPosition, fetchText, onProgress, onContext, jumpTarget, onJumpError, t }: TextReaderProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const articleRef = useRef<HTMLDivElement>(null)
   const onProgressRef = useRef(onProgress)
@@ -84,11 +85,15 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
 
   useEffect(() => {
     if (jumpTarget === null || jumpTarget === undefined) return
+    if (!Number.isFinite(jumpTarget.anchor.ratio) || jumpTarget.anchor.ratio < 0 || jumpTarget.anchor.ratio > 1) {
+      onJumpError?.(t('jumpUnavailable'))
+      return
+    }
     const scroller = scrollRef.current
     if (scroller === null) return
     const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight)
     scroller.scrollTop = jumpTarget.anchor.ratio * max
-  }, [jumpTarget?.key, text])
+  }, [jumpTarget?.key, text, onJumpError, t])
 
   const handleScroll = () => {
     const scroller = scrollRef.current

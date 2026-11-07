@@ -8,6 +8,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from './icons.tsx'
 
 interface PdfReaderProps {
   readonly jumpTarget?: { readonly key: number; readonly anchor: ReadingPosition } | null
+  readonly onJumpError?: (message: string) => void
   readonly book: BookView
   readonly initialPosition: PdfPosition | null
   readonly initialWidth: number | null
@@ -37,7 +38,7 @@ function cleanPdfText(raw: string): string {
   return text.replace(/\n{3,}/g, '\n\n').trim()
 }
 
-export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, fetchBytes, onProgress, onContext, onScreenshot, jumpTarget, t }: PdfReaderProps) {
+export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, fetchBytes, onProgress, onContext, onScreenshot, jumpTarget, onJumpError, t }: PdfReaderProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const textLayerRef = useRef<HTMLDivElement>(null)
@@ -298,6 +299,10 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
     const target = jumpTarget
     if (target === null || target === undefined || target.anchor.kind !== 'pdf') return
     const anchor = target.anchor
+    if (anchor.page < 1 || anchor.page > totalRef.current) {
+      onJumpError?.(t('jumpUnavailable'))
+      return
+    }
     const scroller = scrollRef.current
     if (anchor.page === pageRef.current) {
       if (scroller !== null) {
@@ -306,11 +311,10 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
       }
       return
     }
-    restoreRef.current = anchor.offset
-    goTo(anchor.page)
+    goTo(anchor.page, anchor.offset)
     // goTo is stable for the target page; key changes only on an explicit note jump.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jumpTarget?.key])
+  }, [jumpTarget?.key, onJumpError, t])
 
   useEffect(() => { setPageInput(String(page)) }, [page])
 
@@ -323,10 +327,10 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
     report(pageRef.current, ratio)
   }, [report])
 
-  const goTo = useCallback((next: number) => {
+  const goTo = useCallback((next: number, offset = 0) => {
     const target = clampPage(next, Math.max(1, totalRef.current))
     if (target === pageRef.current) return
-    restoreRef.current = 0
+    restoreRef.current = offset
     suppressRef.current = true
     renderingRef.current = true
     setPage(target)

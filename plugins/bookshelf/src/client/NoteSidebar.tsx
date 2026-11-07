@@ -24,6 +24,7 @@ interface NoteSidebarProps {
   readonly onClearScreenshot: () => void
   readonly onClearContext: () => void
   readonly onJump: (anchor: ReadingPosition) => void
+  readonly getCurrentAnchor: () => ReadingPosition | null
   readonly onClose: () => void
   readonly flushRef?: MutableRefObject<(() => Promise<boolean>) | null>
 }
@@ -41,7 +42,7 @@ function contextRangeLabel(context: ReaderTextContext, t: Translate): string {
 }
 
 /** Side panel with per-book Markdown notes and current-context Q&A. */
-export function NoteSidebar({ book, api, t, context, screenshot, onClearScreenshot, onClearContext, onJump, onClose, flushRef }: NoteSidebarProps) {
+export function NoteSidebar({ book, api, t, context, screenshot, onClearScreenshot, onClearContext, onJump, getCurrentAnchor, onClose, flushRef }: NoteSidebarProps) {
   const [tab, setTab] = useState<SidebarTab>('notes')
   const [notes, setNotes] = useState<BookNote[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -224,7 +225,7 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
         bookFormat: book.format,
         title: t('untitledNote'),
         markdown: '',
-        anchor: book.progress.position,
+        anchor: getCurrentAnchor() ?? book.progress.position,
       })
       setNotes((current) => [...current, saved])
       setSelectedId(saved.id)

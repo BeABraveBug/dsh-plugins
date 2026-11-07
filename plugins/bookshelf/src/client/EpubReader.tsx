@@ -6,6 +6,7 @@ import type { Translate } from './i18n.ts'
 
 interface EpubReaderProps {
   readonly jumpTarget?: { readonly key: number; readonly anchor: EpubPosition } | null
+  readonly onJumpError?: (message: string) => void
   readonly book: BookView
   readonly initialPosition: EpubPosition | null
   readonly fetchBytes: (id: string) => Promise<ArrayBuffer>
@@ -36,7 +37,7 @@ function epubFactory(): (input: ArrayBuffer) => Book {
   throw new Error('EPUB parser is unavailable')
 }
 
-export function EpubReader({ book, initialPosition, fetchBytes, onProgress, onContext, jumpTarget, t }: EpubReaderProps) {
+export function EpubReader({ book, initialPosition, fetchBytes, onProgress, onContext, jumpTarget, onJumpError, t }: EpubReaderProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const onProgressRef = useRef(onProgress)
   const onContextRef = useRef(onContext)
@@ -50,8 +51,8 @@ export function EpubReader({ book, initialPosition, fetchBytes, onProgress, onCo
   useEffect(() => {
     const target = jumpTarget
     if (target === null || target === undefined) return
-    void renditionRef.current?.display(target.anchor.cfi).catch(() => undefined)
-  }, [jumpTarget?.key, loading])
+    void renditionRef.current?.display(target.anchor.cfi).catch(() => onJumpError?.(t('jumpUnavailable')))
+  }, [jumpTarget?.key, loading, onJumpError, t])
 
   useEffect(() => {
     let disposed = false

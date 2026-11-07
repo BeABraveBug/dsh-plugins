@@ -141,6 +141,8 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
   const [readerContext, setReaderContext] = useState<ReaderTextContext | null>(null)
   const [jumpTarget, setJumpTarget] = useState<{ key: number; anchor: ReadingPosition } | null>(null)
   const jumpKeyRef = useRef(0)
+  const latestPositionRef = useRef<ReadingPosition | null>(book.progress.position)
+  const [jumpError, setJumpError] = useState<string | null>(null)
   const [screenshot, setScreenshot] = useState<ReaderScreenshot | null>(null)
 
   useEffect(() => {
@@ -201,6 +203,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
   }, [notesWidth])
 
   const onProgress = useCallback((position: ReadingPosition, percent: number) => {
+    latestPositionRef.current = position
     saver.report(position, percent)
   }, [saver])
 
@@ -250,6 +253,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
         </div>
       </header>
       {actionError !== null && <div className="bs-inline-error" role="alert">{actionError}</div>}
+      {jumpError !== null && <div className="bs-inline-error" role="alert">{jumpError}</div>}
       <div className="bs-reader-body">
         <div className="bs-reader-main">
           <ReaderBoundary key={book.id} fallback={fallback}>
@@ -264,6 +268,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
                 onContext={setReaderContext}
                 onScreenshot={setScreenshot}
                 jumpTarget={jumpTarget !== null && jumpTarget.anchor.kind === 'pdf' ? { key: jumpTarget.key, anchor: jumpTarget.anchor } : null}
+                onJumpError={setJumpError}
                 t={t}
               />
             )}
@@ -272,6 +277,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
                 book={book}
                 initialPosition={book.progress.position?.kind === 'epub' ? book.progress.position : null}
                 jumpTarget={jumpTarget !== null && jumpTarget.anchor.kind === 'epub' ? { key: jumpTarget.key, anchor: jumpTarget.anchor } : null}
+                onJumpError={setJumpError}
                 fetchBytes={api.fileBytes}
                 onProgress={onProgress}
                 onContext={setReaderContext}
@@ -283,6 +289,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
                 book={book}
                 initialPosition={book.progress.position?.kind === 'scroll' ? book.progress.position : null}
                 jumpTarget={jumpTarget !== null && jumpTarget.anchor.kind === 'scroll' ? { key: jumpTarget.key, anchor: jumpTarget.anchor } : null}
+                onJumpError={setJumpError}
                 fetchText={api.fileText}
                 onProgress={onProgress}
                 onContext={setReaderContext}
@@ -296,7 +303,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
             <div className="bs-note-resizer" onPointerDown={startResize} role="separator" aria-orientation="vertical" aria-label={t('resizeNotes')} />
             <div className="bs-note-pane" style={{ width: notesWidth }}>
               <NoteSidebar book={book} api={api} t={t} context={readerContext} screenshot={screenshot} onClearScreenshot={() => setScreenshot(null)}
-                onClearContext={() => setReaderContext(null)} onJump={(anchor) => { jumpKeyRef.current += 1; setJumpTarget({ key: jumpKeyRef.current, anchor }) }} onClose={() => setNotesOpen(false)} flushRef={noteFlushRef} />
+                onClearContext={() => setReaderContext(null)} onJump={(anchor) => { setJumpError(null); jumpKeyRef.current += 1; setJumpTarget({ key: jumpKeyRef.current, anchor }) }} getCurrentAnchor={() => latestPositionRef.current ?? book.progress.position} onClose={() => setNotesOpen(false)} flushRef={noteFlushRef} />
             </div>
           </>
         )}
