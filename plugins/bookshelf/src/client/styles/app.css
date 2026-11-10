@@ -1111,3 +1111,10 @@
 @media (max-width: 760px) {
   .bs-book.is-cover-card .bs-cover { height: auto; aspect-ratio: 2 / 3; }
 }
+
+
+.bs-pdf-outline-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px; }
+.bs-pdf-outline-title { min-width: 0; width: 100%; border: 0; border-radius: 5px; background: transparent; color: var(--dsw-alias-label-primary); text-align: left; font: inherit; font-size: 12px; padding: 6px 7px; overflow-wrap: anywhere; cursor: pointer; }
+.bs-pdf-outline-title:hover, .bs-pdf-outline-title.is-current { background: var(--dsw-alias-bg-layer-3); }
+.bs-pdf-outline-toggle { width: 24px; height: 24px; border: 0; border-radius: 5px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; cursor: pointer; }
+.bs-pdf-outline-toggle:hover { background: var(--dsw-alias-bg-layer-3); }

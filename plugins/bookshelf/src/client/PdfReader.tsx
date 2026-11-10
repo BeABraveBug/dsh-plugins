@@ -47,15 +47,22 @@ async function resolveOutline(doc: PDFDocumentProxy, items: readonly unknown[], 
   return result
 }
 
+function OutlineEntryItem({ entry, current, onOpen }: { readonly entry: OutlineEntry; readonly current: number; readonly onOpen: (page: number) => void }) {
+  const [open, setOpen] = useState(entry.page === current)
+  const hasChildren = entry.children.length > 0
+  return <li>
+    <div className="bs-pdf-outline-row">
+      {entry.page > 0
+        ? <button type="button" className={`bs-pdf-outline-title ${entry.page === current ? 'is-current' : ''}`} onClick={() => onOpen(entry.page)}>{entry.title}</button>
+        : <span className="bs-pdf-outline-title">{entry.title}</span>}
+      {hasChildren && <button type="button" className="bs-pdf-outline-toggle" aria-expanded={open} aria-label={open ? 'Collapse' : 'Expand'} onClick={() => setOpen((value) => !value)}>{open ? '▾' : '▸'}</button>}
+    </div>
+    {hasChildren && open && <OutlineTree entries={entry.children} current={current} onOpen={onOpen} />}
+  </li>
+}
+
 function OutlineTree({ entries, current, onOpen }: { readonly entries: readonly OutlineEntry[]; readonly current: number; readonly onOpen: (page: number) => void }) {
-  return <ul className="bs-pdf-outline">{entries.map((entry, index) => <li key={`${entry.title}-${index}`}>
-    {entry.children.length > 0
-      ? <div className="bs-pdf-outline-parent">
-          {entry.page > 0 && <button type="button" className={entry.page === current ? 'is-current' : ''} onClick={() => onOpen(entry.page)}>{entry.title}</button>}
-          <details open={entry.page === current || undefined}><summary aria-label="Expand">{entry.page > 0 ? '▸' : entry.title}</summary><OutlineTree entries={entry.children} current={current} onOpen={onOpen} /></details>
-        </div>
-      : <button type="button" className={entry.page === current ? 'is-current' : ''} onClick={() => { if (entry.page > 0) onOpen(entry.page) }}>{entry.title}</button>}
-  </li>)}</ul>
+  return <ul className="bs-pdf-outline">{entries.map((entry, index) => <OutlineEntryItem key={`${entry.title}-${index}`} entry={entry} current={current} onOpen={onOpen} />)}</ul>
 }
 
 function PdfThumbnail({ doc, page, current, onOpen, label }: { readonly doc: PDFDocumentProxy; readonly page: number; readonly current: boolean; readonly onOpen: (page: number) => void; readonly label: string }) {
