@@ -55,6 +55,7 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
   const [referenceBooks, setReferenceBooks] = useState<BookView[]>([])
   const [referenceBookId, setReferenceBookId] = useState('')
   const [referencePage, setReferencePage] = useState('1')
+  const [referenceError, setReferenceError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -243,6 +244,7 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
       setReferenceBooks(pdfs)
       setReferenceBookId(pdfs.find((entry) => entry.id !== book.id)?.id ?? pdfs[0]?.id ?? '')
       setReferencePage('1')
+      setReferenceError(null)
       setReferenceOpen(true)
     } catch (cause: unknown) {
       setError(messageOf(cause))
@@ -570,11 +572,12 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
                   {referenceBooks.map((entry) => <option key={entry.id} value={entry.id}>{entry.title}</option>)}
                 </select>
               </label>
-              <label>{t('page')}<input type="number" min={1} value={referencePage} onChange={(event) => setReferencePage(event.target.value)} /></label>
+              <label>{t('page')}<input type="number" min={1} value={referencePage} onChange={(event) => { setReferencePage(event.target.value); setReferenceError(null) }} /></label>
+              {referenceError !== null && <div className="bs-inline-error" role="alert">{referenceError}</div>}
             </div>
             <footer className="bs-modal-footer"><div className="bs-actions">
               <button type="button" className="bs-button" onClick={() => setReferenceOpen(false)}>{t('cancel')}</button>
-              <button type="button" className="bs-button bs-button-primary" onClick={() => { const target = referenceBooks.find((entry) => entry.id === referenceBookId); if (target !== undefined) { insertReference(target.id, target.title, Number(referencePage)); setReferenceOpen(false) } }} disabled={referenceBookId === ''}>{t('insert')}</button>
+              <button type="button" className="bs-button bs-button-primary" onClick={() => { const target = referenceBooks.find((entry) => entry.id === referenceBookId); const page = Number(referencePage); if (target === undefined || !Number.isInteger(page) || page < 1) { setReferenceError(t('invalidPage')); return } insertReference(target.id, target.title, page); setReferenceOpen(false) }} disabled={referenceBookId === ''}>{t('insert')}</button>
             </div></footer>
           </section>
         </div>

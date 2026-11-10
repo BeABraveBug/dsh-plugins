@@ -50,7 +50,10 @@ async function resolveOutline(doc: PDFDocumentProxy, items: readonly unknown[], 
 function OutlineTree({ entries, current, onOpen }: { readonly entries: readonly OutlineEntry[]; readonly current: number; readonly onOpen: (page: number) => void }) {
   return <ul className="bs-pdf-outline">{entries.map((entry, index) => <li key={`${entry.title}-${index}`}>
     {entry.children.length > 0
-      ? <details open={entry.page === current || undefined}><summary>{entry.title}</summary><OutlineTree entries={entry.children} current={current} onOpen={onOpen} /></details>
+      ? <div className="bs-pdf-outline-parent">
+          {entry.page > 0 && <button type="button" className={entry.page === current ? 'is-current' : ''} onClick={() => onOpen(entry.page)}>{entry.title}</button>}
+          <details open={entry.page === current || undefined}><summary aria-label="Expand">{entry.page > 0 ? '▸' : entry.title}</summary><OutlineTree entries={entry.children} current={current} onOpen={onOpen} /></details>
+        </div>
       : <button type="button" className={entry.page === current ? 'is-current' : ''} onClick={() => { if (entry.page > 0) onOpen(entry.page) }}>{entry.title}</button>}
   </li>)}</ul>
 }
@@ -176,6 +179,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
         if (referencePage !== undefined && (referencePage < 1 || referencePage > doc.numPages)) {
           setError(t('jumpUnavailable'))
           setLoading(false)
+          void doc.destroy().catch(() => {})
           return
         }
         docRef.current = doc

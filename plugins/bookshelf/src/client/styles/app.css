@@ -864,11 +864,11 @@
 .bs-note-tab.is-active::after { content: ''; position: absolute; left: 0; right: 0; bottom: -11px; height: 2px; background: currentColor; }
 
 .bs-note-notes, .bs-note-qa { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
-.bs-note-tools { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 16px clamp(14px, 5%, 20px) 8px; }
+.bs-note-tools { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 16px clamp(14px, 5%, 20px) 8px; }
 .bs-note-picker { position: relative; min-width: 0; }
 .bs-note-picker summary { max-width: 100%; padding: 5px 2px; border-radius: 6px; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 13px; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; list-style: none; cursor: pointer; }
 .bs-note-picker[open] summary { color: var(--dsw-alias-label-primary); }
-.bs-note-actions { flex: none; display: flex; align-items: center; gap: 2px; }
+.bs-note-actions { flex: 0 1 auto; min-width: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 2px; }
 .bs-note-action { display: inline-flex; align-items: center; justify-content: center; min-height: 30px; padding: 4px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 12px; line-height: 1.4; cursor: pointer; }
 @media (hover: hover) { .bs-note-action:hover:not(:disabled) { background: var(--dsw-alias-bg-layer-3); color: var(--dsw-alias-label-primary); } }
 .bs-note-action:disabled { opacity: 0.45; cursor: not-allowed; }

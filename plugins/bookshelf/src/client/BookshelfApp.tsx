@@ -184,6 +184,7 @@ export function BookshelfApp({ t, api, initialBookId, initialPage }: BookshelfAp
       notify('error', messageOf(cause))
       if (cause instanceof BookshelfApiError && cause.code === 'bookshelf/store-write-failed') {
         // Reading must not be blocked by the optional last-opened ordering write.
+        setInitialPageFor(null)
         setReaderId(book.id)
       } else {
         void refresh(false)
