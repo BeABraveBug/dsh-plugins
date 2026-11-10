@@ -1103,3 +1103,11 @@
 .bs-pdf-outline-parent > details { margin-left: 4px; }
 .bs-pdf-outline-parent > details > summary { list-style: none; width: 100%; font-size: 11px; color: var(--dsw-alias-label-tertiary); padding: 2px 7px; cursor: pointer; }
 .bs-pdf-outline-parent > details > summary::-webkit-details-marker { display: none; }
+
+/* Portrait book wall: covers keep their original aspect inside a portrait frame. */
+.bs-grid { width: 100%; max-width: 1120px; margin-inline: auto; }
+.bs-book.is-cover-card .bs-cover { height: auto; aspect-ratio: 2 / 3; background: transparent; }
+.bs-book.is-cover-card .bs-cover img { object-fit: contain; }
+@media (max-width: 760px) {
+  .bs-book.is-cover-card .bs-cover { height: auto; aspect-ratio: 2 / 3; }
+}
