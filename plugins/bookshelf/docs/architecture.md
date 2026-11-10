@@ -1,6 +1,6 @@
 # DSH Bookshelf Architecture
 
-状态：已确认的目标架构。阶段 A 的笔记侧栏与独立笔记存储、阶段 B 的文本上下文和截图预览、阶段 C 的最小文本问答、按书模型选择和对话消息持久化已实现；历史上下文拼接、截图持久化和对话管理仍待实现。现有接入在 DSH `0.2.1-rc.5` 上的验证不代表 AI 接口已验证；兼容范围与未验证项见 [README](../README.md)。行为要求见 [Spec](spec.md)。
+状态：已确认的目标架构，当前实现范围见下文“现有实现结构”。书架、格式阅读器、独立页、笔记存储、文本上下文、会话内截图预览及旧问答消息存储已实现；通用会话接入、历史上下文与逐轮来源尚未实现。截图持久化和发送的规则尚未确定，不属于当前书架实施要求。兼容范围与未验证项见 [README](../README.md)，行为要求见 [Spec](spec.md)。DSH `0.2.1-rc.5` 的加载验证不等同于真实模型服务端到端验收。
 
 阅读问答的目标结构为书架接入独立通用会话插件。该接入尚未实现，当前书架自带的问答和旧存储作为现状保留，暂停扩展；下文“现有实现结构”不代表目标接入已经完成。
 
@@ -8,7 +8,7 @@
 
 书架具有 DSH 内嵌入口与独立页面入口。两个入口复用书架、阅读器、格式适配及笔记的业务组件与同一 Host 数据服务；页面外壳只负责布局、启动时的书籍定位和全屏交互，不另建书库状态的权威副本。
 
-独立页由当前 DSH 服务承载，沿用宿主认证和受控文件路由；不能因为脱离 DSH 界面外壳而绕过认证，也不新启无认证静态文件服务器。现有 Client 依赖宿主模块加载与样式环境，独立页需要明确的启动适配与资源装载；不能假定把现有 client.js 放入空 HTML 即可运行。具体页面路径与资源注册方式在目标 DSH 中验证后确定，不预定不存在的宿主 API。
+独立页由当前 DSH 服务承载，沿用宿主认证和受控文件路由；不能因为脱离 DSH 界面外壳而绕过认证，也不新启无认证静态文件服务器。内嵌 Client 通过宿主 ModuleLoader 加载；独立页由已认证的 `/api/bookshelf/standalone` 返回外壳与内联的独立 bundle，独立入口装载 React、共享业务组件及基础主题样式，不依赖空 HTML 直接加载内嵌 client.js。
 
 Host 仍是同一运行配置中书目、进度与笔记的唯一写入者，两个入口共用已注册的存储实例与并发控制。独立页不得额外创建一套 Library/NoteStore 来写同一文件。进度写入需要区分阅读窗口与更新顺序，避免后台窗口或迟到请求覆盖更新位置；本地多页面协调不扩大为跨 DSH 进程同时写同一数据目录的支持。
 
@@ -57,7 +57,7 @@ DSH 界面侧                         DSH 宿主侧
 
 笔记正文采用 Markdown；笔记和问答的持久化记录由宿主管理，界面未保存的输入不作为已持久化内容。笔记和对话与可移除的书架条目具有独立生命周期，按归一化原书路径维持关联；移出条目不能级联删除这些数据。同一路径重新入架时恢复关联，不恢复已经清除的阅读进度与已读状态。
 
-每轮问答保存与该轮绑定的上下文快照和来源位置；当前阅读位置变化不改写历史快照。模型输出只有在用户选择加入笔记后才进入笔记保存流程。具体模型接入不属于已验证的现有 Fetch 接口能力。
+目标接入中，每轮问答保存与该轮绑定的上下文快照和来源位置；当前阅读位置变化不改写历史快照。现有 ConversationStore 只保存消息身份、角色、正文和时间，不保存上下文或来源，也不为模型构造历史；不能以消息列表持久化代替这一目标。模型输出只有在用户选择加入笔记后才进入笔记保存流程。现有模型调用由 Host 的 AiService 通过 DSH llm 服务执行；真实模型端到端行为仍需单独验证。
 
 本地管理统一处理记录更新，避免并发保存互相覆盖；写入失败不得破坏最近一次有效记录。界面只有在收到保存成功结果后才将状态视为已持久化。
 
@@ -69,34 +69,43 @@ DSH 界面侧                         DSH 宿主侧
 2. **打开**：书架发出打开请求，本地管理读取原文件并提供已有阅读状态；阅读器选择对应格式呈现并恢复位置。载入书架时的文件可用性检查也由本地管理负责，检查结果交给书架提示，不自动移出记录。
 3. **保存进度**：阅读器报告当前定位与展示进度，本地管理更新对应记录并保存 JSON，返回保存结果；书架据此展示进度。此流程不自动改变手动已读状态。
 4. **保存笔记**：侧栏提交所选书籍与笔记的编辑内容，由本地管理保存并返回结果；只有成功响应使界面进入已保存状态。
-5. **阅读问答**：阅读器向侧栏提供发送时的内容与位置快照；问答使用固定快照，历史记录由宿主管理。将回答加入笔记复用笔记保存流程。
+5. **阅读问答**：阅读器向现有侧栏提供内容与位置；发送请求使用本轮文字，消息正文由宿主管理。目标通用会话接入再承载历史构造与逐轮来源保存。将回答加入笔记复用笔记保存流程。
 6. **移出与重新关联**：本地管理移除书架条目和阅读状态，保留独立笔记与问答；同一路径再次添加时重新关联保留数据。
+
+## PDF 导航与页面引用
+
+PDF 阅读器复用当前 PDF.js 文档读取内嵌目录；无可用目录时按页生成缩略图，缩略图在可见时加载。目录和缩略图属于阅读器的本地导航状态，不写入书库。
+
+笔记页面引用以 Markdown 片段链接保存，包含稳定的书籍 id 和 PDF 实际页序。笔记预览只拦截 `#bookshelf-pdf-ref?` 前缀；同书引用交给当前 Reader，跨书引用打开带 `book` 和 `page` 参数的独立阅读页。独立页使用同一 DSH 认证和 Host 数据，页码只作用于首次目标书籍；普通链接不受影响。失败由 Reader 显示局部错误，不伪造边界位置。
 
 ## 现有实现结构
 
 | 位置 | 实现 |
 | --- | --- |
 | `src/host/library.ts` | JSON 书架记录、原子写入、替换失败备份与恢复、路径归一化、目录第一层扫描、可用性检查、并发串行化 |
-| `src/host/routes.ts` | 通过 `ctx.connection.fetch.register` 注册 `/api/bookshelf/rpc`、`/api/bookshelf/file`、`/api/bookshelf/cover` 与 `/api/bookshelf/pdfjs`，路由自身不重复实现认证 |
+| `src/host/routes.ts` | 通过 `ctx.connection.fetch.register` 注册书目操作、原书、封面、PDF.js 资源、独立页与 KaTeX 字体的精确路由，路由自身不重复实现认证 |
 | `src/host/ai.ts` | 读取 DSH 已配置模型目录，通过 `ctx.llm` 收集文本回答；不保存凭据 |
 | `src/host/conversations.ts` | 独立 `conversations.json` 问答消息存储；按书关联与清空 |
 | `src/host/notes.ts` | 独立 `notes.json` 笔记存储；按书路径关联、原子写入、备份恢复与独立删除；每本书的 AI 模型选择与笔记元数据一起保存 |
 | `src/host/covers.ts` | EPUB 内嵌封面解析、TXT/Markdown/PDF 侧车封面查找、macOS PDF Quick Look 缩略图、按文件时间戳缓存；不持久化封面副本 |
-| `src/shared/types.ts` | Host/Client 共享的 JSON 请求、书目、进度与目录浏览类型 |
+| `src/shared/types.ts` | Host/Client 共享的 JSON 请求、书目、进度、笔记、阅读上下文、模型选择与目录浏览类型 |
 | `src/client/api.ts` | 调用已认证 Fetch 路由并区分网络、认证、域错误 |
-| `src/client/BookshelfApp.tsx` | 宽松 4×3 卡片、每页 12 本分页、添加窗口入口、缺失/不可访问提示、移出确认、搜索与最近打开排序 |
+| `src/client/BookshelfApp.tsx` | 封面优先自适应网格、每页最多 12 本分页、逐书更多菜单与详情、添加窗口、可用性提示、移出确认、搜索与最近打开排序 |
+| `src/client/standalone.tsx` 与 `standalone.css` | 独立页启动与基础样式；复用同一书架、阅读器和 Host API |
+| `src/client/themeBridge.ts` | 同源主题缓存与变化通知；完整 DSH 主题同步不属于当前验收保证 |
+| `src/client/markdown.ts` | Markdown 阅读、笔记预览与回答共用的清理、GFM/LaTeX 渲染和 Mermaid 替换；原始 HTML 与受控渲染结果分别清理 |
 | `src/client/NoteSidebar.tsx` | 阅读器右侧笔记列表、Markdown 编辑/预览、自动保存与删除 |
 | `src/client/NotesManager.tsx` | 书架级笔记数据查看与按书删除 |
 | `src/client/AddDialog.tsx` | 文件/目录浏览、“已添加”路径视图、浏览中已添加标记与确认移出 |
 | `src/client/BookCover.tsx` | 可见时加载封面；EPUB/侧车图片走 cover 路由，PDF 无封面时用 Range 按需加载第一页缩略图，Range 失败仅对小文件回退整本读取 |
 | `src/client/pdf.ts` | 阅读器和封面共用同一个 PDF.js worker 与兼容垫片 |
 | `src/client/polyfills.ts` | 为旧 Chromium 补齐 PDF.js 使用的 Promise、Uint8Array、Map、Response.bytes 与 Math.sumPrecise 等能力 |
-| `src/client/Reader.tsx` | 阅读会话外壳、格式选择、防抖保存、保存失败提示与已读标记 |
+| `src/client/Reader.tsx` | 阅读外壳、格式选择、带活动时间的进度保存、笔记侧栏偏好与保存协调、独立打开、全屏及已读标记 |
 | `src/client/PdfReader.tsx` | PDF.js 单页渲染、文本层选中、当前页/选区上下文、阅读区截图预览、页码/页内滚动比例、每本书独立宽度/缩放与保存恢复 |
 | `src/client/EpubReader.tsx` | EPUB.js 连续滚动、CFI 保存恢复、选中文字/当前内容上下文、禁用脚本内容 |
 | `src/client/TextReader.tsx` | TXT 只读文本与 Markdown 解析/清理、滚动比例保存恢复、选中文字/视口上下文 |
 
-独立插件不使用 Typert 生成管线；Host 与 Client 通过 Connection 的认证精确 Fetch 路由通信。路由路径固定为 `/api/bookshelf/rpc`（JSON 操作）、`/api/bookshelf/file`（原文件字节与 Range）、`/api/bookshelf/cover`（封面字节；无封面返回 204）与 `/api/bookshelf/pdfjs`（PDF.js CMaps、标准字体与 WASM 资源）。记录保存到 `$DSH_HOME/bookshelf/library.json`，原文件只读。封面从原文件、EPUB 内嵌资源或侧车图片按需读取；macOS 上 PDF 第一页由 Host 的 Quick Look（`qlmanage`，并发上限 2）生成，其他平台由 PDF.js 的 Range 请求读取；Range 失败时仅对不超过 5 MB 的文件回退整本读取。缩略图只保存在浏览器内存，封面不写入书架记录。PDF worker 作为字符串内联进 Client bundle；构建还把 PDF.js 的 `cmaps/`、`standard_fonts/` 与 `wasm/` 复制到 `lib/pdfjs/`，由认证路由按需提供。阅读器和封面启用 `disableFontFace`，让未内嵌字体使用系统字体回退，并在启动前补齐旧 Chromium 缺少的 Promise、Uint8Array、Map、Response.bytes 与 Math.sumPrecise 等能力。
+独立插件不使用 Typert 生成管线；Host 与 Client 通过 Connection 的认证精确 Fetch 路由通信。路由路径固定为 `/api/bookshelf/rpc`（JSON 操作）、`/api/bookshelf/file`（原文件字节与 Range）、`/api/bookshelf/cover`（封面字节；无封面返回 204）、`/api/bookshelf/pdfjs`（PDF.js CMaps、标准字体与 WASM 资源）、`/api/bookshelf/standalone`（独立页）与 `/api/bookshelf/katex-font`（公式字体）。书目、笔记与消息分别保存到 `$DSH_HOME/bookshelf/` 下的 library.json、notes.json 与 conversations.json，原文件只读。封面从原文件、EPUB 内嵌资源或侧车图片按需读取；macOS 上 PDF 第一页由 Host 的 Quick Look（`qlmanage`，并发上限 2）生成，其他平台由 PDF.js 的 Range 请求读取；Range 失败时仅对不超过 5 MB 的文件回退整本读取。封面缓存为 Host 或浏览器内存中的可重建数据；Quick Look 使用临时目录并在请求结束后清理，封面不写入书架记录。PDF worker 作为字符串内联进 Client bundle；构建还把 PDF.js 的 `cmaps/`、`standard_fonts/` 与 `wasm/` 复制到 `lib/pdfjs/`，由认证路由按需提供。KaTeX 字体复制到 `lib/katex/fonts/`，注入的 CSS 将字体 URL 指向精确字体路由；两个浏览器入口均使用同一资源服务。阅读器和封面启用 `disableFontFace`，让未内嵌字体使用系统字体回退，并在启动前补齐旧 Chromium 缺少的 Promise、Uint8Array、Map、Response.bytes 与 Math.sumPrecise 等能力。
 
 ## 失败边界
 

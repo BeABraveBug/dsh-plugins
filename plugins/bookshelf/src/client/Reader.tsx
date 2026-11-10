@@ -261,7 +261,8 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead, initialPage 
             {book.format === 'pdf' && (
               <PdfReader
                 book={book}
-                initialPosition={book.progress.position?.kind === 'pdf' ? (initialPage === undefined ? book.progress.position : { ...book.progress.position, page: initialPage }) : initialPage === undefined ? null : { kind: 'pdf', page: initialPage, total: 0, offset: 0 }}
+                initialPosition={book.progress.position?.kind === 'pdf' ? (initialPage === undefined ? book.progress.position : { ...book.progress.position, page: initialPage, offset: 0 }) : initialPage === undefined ? null : { kind: 'pdf', page: initialPage, total: 0, offset: 0 }}
+                referencePage={initialPage}
                 initialWidth={book.readerWidth}
                 onWidthChange={onWidthChange}
                 fetchBytes={api.fileBytes}

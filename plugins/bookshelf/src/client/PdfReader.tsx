@@ -8,6 +8,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from './icons.tsx'
 
 interface PdfReaderProps {
   readonly jumpTarget?: { readonly key: number; readonly anchor: ReadingPosition } | null
+  readonly referencePage?: number
   readonly onJumpError?: (message: string) => void
   readonly book: BookView
   readonly initialPosition: PdfPosition | null
@@ -34,7 +35,11 @@ async function resolveOutline(doc: PDFDocumentProxy, items: readonly unknown[], 
     let page = 0
     try {
       const dest = typeof item.dest === 'string' ? await doc.getDestination(item.dest) : item.dest
-      if (Array.isArray(dest) && dest.length > 0) page = (await doc.getPageIndex(dest[0] as never)) + 1
+      if (Array.isArray(dest) && dest.length > 0) {
+        const target = dest[0]
+        page = typeof target === 'number' ? target + 1 : (await doc.getPageIndex(target as never)) + 1
+        if (!Number.isInteger(page) || page < 1 || page > doc.numPages) page = 0
+      }
     } catch { page = 0 }
     const children = Array.isArray(item.items) && depth < 8 ? await resolveOutline(doc, item.items, depth + 1) : []
     if (page > 0 || children.length > 0) result.push({ title: item.title, page, children })
@@ -102,7 +107,7 @@ function cleanPdfText(raw: string): string {
   return text.replace(/\n{3,}/g, '\n\n').trim()
 }
 
-export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, fetchBytes, onProgress, onContext, onScreenshot, jumpTarget, onJumpError, t }: PdfReaderProps) {
+export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, fetchBytes, onProgress, onContext, onScreenshot, jumpTarget, referencePage, onJumpError, t }: PdfReaderProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const textLayerRef = useRef<HTMLDivElement>(null)
@@ -168,10 +173,16 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
           void doc.destroy().catch(() => {})
           return
         }
+        if (referencePage !== undefined && (referencePage < 1 || referencePage > doc.numPages)) {
+          setError(t('jumpUnavailable'))
+          setLoading(false)
+          return
+        }
         docRef.current = doc
         try {
           const rawOutline = await doc.getOutline()
-          setOutline(rawOutline === null || rawOutline.length === 0 ? null : await resolveOutline(doc, rawOutline))
+          const resolved = rawOutline === null ? [] : await resolveOutline(doc, rawOutline)
+          setOutline(resolved.length === 0 ? null : resolved)
         } catch { setOutline(null) }
         setTotal(doc.numPages)
         totalRef.current = doc.numPages

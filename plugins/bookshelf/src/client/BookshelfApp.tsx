@@ -72,6 +72,7 @@ export function BookshelfApp({ t, api, initialBookId, initialPage }: BookshelfAp
   const [addMode, setAddMode] = useState<AddMode | null>(null)
   const [notesOpen, setNotesOpen] = useState(false)
   const [detailBook, setDetailBook] = useState<BookView | null>(null)
+  const [initialPageFor, setInitialPageFor] = useState<string | null>(initialPage === undefined ? null : initialBookId ?? null)
   const [menuPosition, setMenuPosition] = useState<{ id: string; left: number; top: number } | null>(null)
   const openMenuRef = useRef<HTMLDetailsElement | null>(null)
   const [readerId, setReaderId] = useState<string | null>(null)
@@ -177,6 +178,7 @@ export function BookshelfApp({ t, api, initialBookId, initialPage }: BookshelfAp
     try {
       const record = await api.open(book.id)
       setBooks((current) => sortBooks(mergeBook(current, record)))
+      setInitialPageFor(null)
       setReaderId(book.id)
     } catch (cause: unknown) {
       notify('error', messageOf(cause))
@@ -288,7 +290,7 @@ export function BookshelfApp({ t, api, initialBookId, initialPage }: BookshelfAp
       <div className="bs-app">
         <Reader
           book={openBookRecord}
-          initialPage={initialPage}
+          initialPage={readerId === initialPageFor ? initialPage : undefined}
           api={api}
           t={t}
           onClose={() => setReaderId(null)}

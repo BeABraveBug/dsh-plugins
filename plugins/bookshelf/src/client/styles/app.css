@@ -1098,3 +1098,8 @@
   .bs-pdf-layout { position: relative; }
   .bs-pdf-nav { position: absolute; inset: 0 auto 0 0; z-index: 7; width: min(280px, 82%); box-shadow: var(--dsw-elevation-soft); }
 }
+
+.bs-pdf-outline-parent { display: grid; gap: 2px; }
+.bs-pdf-outline-parent > details { margin-left: 4px; }
+.bs-pdf-outline-parent > details > summary { list-style: none; width: 100%; font-size: 11px; color: var(--dsw-alias-label-tertiary); padding: 2px 7px; cursor: pointer; }
+.bs-pdf-outline-parent > details > summary::-webkit-details-marker { display: none; }
