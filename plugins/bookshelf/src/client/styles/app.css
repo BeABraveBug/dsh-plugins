@@ -1087,8 +1087,6 @@
 .bs-pdf-nav { width: 230px; flex: none; overflow: auto; border-right: 0.5px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); padding: 10px; }
 .bs-pdf-outline, .bs-pdf-thumbs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .bs-pdf-outline ul { list-style: none; margin: 4px 0 4px 12px; padding: 0; display: grid; gap: 4px; }
-.bs-pdf-outline summary, .bs-pdf-outline button { width: 100%; border: 0; border-radius: 5px; background: transparent; color: var(--dsw-alias-label-primary); text-align: left; font: inherit; font-size: 12px; padding: 6px 7px; cursor: pointer; overflow-wrap: anywhere; }
-.bs-pdf-outline summary:hover, .bs-pdf-outline button:hover, .bs-pdf-outline .is-current { background: var(--dsw-alias-bg-layer-3); }
 .bs-pdf-thumbs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .bs-pdf-thumb { border: 0.5px solid var(--dsw-alias-border-l1); border-radius: 4px; background: var(--dsw-alias-bg-base); padding: 3px; display: grid; gap: 3px; justify-items: center; color: var(--dsw-alias-label-secondary); font-size: 11px; cursor: pointer; }
 .bs-pdf-thumb.is-current { border-color: var(--dsw-alias-brand-primary); color: var(--dsw-alias-brand-primary); }
@@ -1119,9 +1117,13 @@
 .bs-pdf-outline-toggle { width: 24px; height: 24px; border: 0; border-radius: 5px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; cursor: pointer; }
 .bs-pdf-outline-toggle:hover { background: var(--dsw-alias-bg-layer-3); }
 
-.bs-pdf-outline-row { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: 10px; border-radius: 6px; padding: 1px 4px; }
-.bs-pdf-outline-row.has-toggle { grid-template-columns: 24px minmax(0, 1fr); }
-.bs-pdf-outline-row.is-current, .bs-pdf-outline-row:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 12%, transparent); }
+.bs-pdf-outline-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: center; gap: 8px; border-radius: 6px; padding: 1px 4px; }
+.bs-pdf-outline-row.is-current { background: color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent); }
+.bs-pdf-outline-row:not(.is-current):hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent); }
 .bs-pdf-outline-row .bs-pdf-outline-title { width: 100%; min-width: 0; padding: 6px 4px; border: 0; background: transparent; color: var(--dsw-alias-label-primary); text-align: left; font: inherit; font-size: 12px; overflow-wrap: anywhere; cursor: pointer; }
-.bs-pdf-outline-row .bs-pdf-outline-toggle { width: 24px; height: 24px; border: 0; border-radius: 5px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; cursor: pointer; }
+.bs-pdf-outline-row .bs-pdf-outline-toggle { width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 5px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; }
+.bs-pdf-outline-row .bs-pdf-outline-toggle.is-empty { pointer-events: none; }
+.bs-pdf-outline-row .bs-pdf-outline-toggle svg { transition: transform 120ms ease; }
+.bs-pdf-outline-row .bs-pdf-outline-toggle svg.is-open { transform: rotate(90deg); }
 .bs-pdf-outline-row .bs-pdf-outline-toggle:hover { color: var(--dsw-alias-label-primary); }
+.bs-pdf-outline-row .bs-pdf-outline-toggle:focus-visible, .bs-pdf-outline-row .bs-pdf-outline-title:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 1px; }

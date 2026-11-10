@@ -52,7 +52,9 @@ function OutlineEntryItem({ entry, current, onOpen }: { readonly entry: OutlineE
   const hasChildren = entry.children.length > 0
   return <li>
     <div className={`bs-pdf-outline-row ${hasChildren ? 'has-toggle' : ''} ${entry.page === current ? 'is-current' : ''}`}>
-      {hasChildren && <button type="button" className="bs-pdf-outline-toggle" aria-expanded={open} aria-label={open ? 'Collapse' : 'Expand'} onClick={() => setOpen((value) => !value)}>{open ? '▾' : '▸'}</button>}
+      {hasChildren
+        ? <button type="button" className="bs-pdf-outline-toggle" aria-expanded={open} aria-label={open ? 'Collapse' : 'Expand'} onClick={() => setOpen((value) => !value)}><ChevronRightIcon size={14} className={open ? 'is-open' : ''} /></button>
+        : <span className="bs-pdf-outline-toggle is-empty" aria-hidden="true" />}
       {entry.page > 0
         ? <button type="button" className="bs-pdf-outline-title" onClick={() => onOpen(entry.page)}>{entry.title}</button>
         : <span className="bs-pdf-outline-title">{entry.title}</span>}
