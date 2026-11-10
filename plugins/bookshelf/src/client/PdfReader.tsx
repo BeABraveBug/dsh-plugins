@@ -51,11 +51,11 @@ function OutlineEntryItem({ entry, current, onOpen }: { readonly entry: OutlineE
   const [open, setOpen] = useState(entry.page === current)
   const hasChildren = entry.children.length > 0
   return <li>
-    <div className="bs-pdf-outline-row">
-      {entry.page > 0
-        ? <button type="button" className={`bs-pdf-outline-title ${entry.page === current ? 'is-current' : ''}`} onClick={() => onOpen(entry.page)}>{entry.title}</button>
-        : <span className="bs-pdf-outline-title">{entry.title}</span>}
+    <div className={`bs-pdf-outline-row ${hasChildren ? 'has-toggle' : ''} ${entry.page === current ? 'is-current' : ''}`}>
       {hasChildren && <button type="button" className="bs-pdf-outline-toggle" aria-expanded={open} aria-label={open ? 'Collapse' : 'Expand'} onClick={() => setOpen((value) => !value)}>{open ? '▾' : '▸'}</button>}
+      {entry.page > 0
+        ? <button type="button" className="bs-pdf-outline-title" onClick={() => onOpen(entry.page)}>{entry.title}</button>
+        : <span className="bs-pdf-outline-title">{entry.title}</span>}
     </div>
     {hasChildren && open && <OutlineTree entries={entry.children} current={current} onOpen={onOpen} />}
   </li>

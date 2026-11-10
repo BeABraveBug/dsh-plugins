@@ -1118,3 +1118,10 @@
 .bs-pdf-outline-title:hover, .bs-pdf-outline-title.is-current { background: var(--dsw-alias-bg-layer-3); }
 .bs-pdf-outline-toggle { width: 24px; height: 24px; border: 0; border-radius: 5px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; cursor: pointer; }
 .bs-pdf-outline-toggle:hover { background: var(--dsw-alias-bg-layer-3); }
+
+.bs-pdf-outline-row { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: 10px; border-radius: 6px; padding: 1px 4px; }
+.bs-pdf-outline-row.has-toggle { grid-template-columns: 24px minmax(0, 1fr); }
+.bs-pdf-outline-row.is-current, .bs-pdf-outline-row:hover { background: color-mix(in srgb, var(--dsw-alias-label-primary) 12%, transparent); }
+.bs-pdf-outline-row .bs-pdf-outline-title { width: 100%; min-width: 0; padding: 6px 4px; border: 0; background: transparent; color: var(--dsw-alias-label-primary); text-align: left; font: inherit; font-size: 12px; overflow-wrap: anywhere; cursor: pointer; }
+.bs-pdf-outline-row .bs-pdf-outline-toggle { width: 24px; height: 24px; border: 0; border-radius: 5px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; cursor: pointer; }
+.bs-pdf-outline-row .bs-pdf-outline-toggle:hover { color: var(--dsw-alias-label-primary); }
