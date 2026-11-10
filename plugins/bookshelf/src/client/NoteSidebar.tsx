@@ -50,6 +50,11 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
   const [markdown, setMarkdown] = useState('')
   const [preview, setPreview] = useState(false)
   const previewRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [referenceOpen, setReferenceOpen] = useState(false)
+  const [referenceBooks, setReferenceBooks] = useState<BookView[]>([])
+  const [referenceBookId, setReferenceBookId] = useState('')
+  const [referencePage, setReferencePage] = useState('1')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -213,6 +218,52 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
     dirty.current = false
   }
 
+  const currentPdfAnchor = (): { page: number; total: number } | null => {
+    const anchor = getCurrentAnchor()
+    return anchor?.kind === 'pdf' ? { page: anchor.page, total: anchor.total } : null
+  }
+
+  const insertReference = (id: string, title: string, page: number) => {
+    if (!Number.isInteger(page) || page < 1) return
+    const text = `[《${title}》 · 第 ${page} 页](#bookshelf-pdf-ref?book=${encodeURIComponent(id)}&page=${page})`
+    const textarea = textareaRef.current
+    const start = textarea?.selectionStart ?? markdown.length
+    const end = textarea?.selectionEnd ?? start
+    setMarkdown(`${markdown.slice(0, start)}${text}${markdown.slice(end)}`)
+    setPreview(false)
+    changed()
+    requestAnimationFrame(() => { textarea?.focus(); textarea?.setSelectionRange(start + text.length, start + text.length) })
+  }
+
+  const openReferenceDialog = async () => {
+    setError(null)
+    try {
+      const { books } = await api.list()
+      const pdfs = books.filter((entry) => entry.format === 'pdf')
+      setReferenceBooks(pdfs)
+      setReferenceBookId(pdfs.find((entry) => entry.id !== book.id)?.id ?? pdfs[0]?.id ?? '')
+      setReferencePage('1')
+      setReferenceOpen(true)
+    } catch (cause: unknown) {
+      setError(messageOf(cause))
+    }
+  }
+
+  const jumpToReference = (href: string) => {
+    if (!href.startsWith('#bookshelf-pdf-ref?')) return false
+    const params = new URLSearchParams(href.slice('#bookshelf-pdf-ref?'.length))
+    const id = params.get('book')
+    const page = Number(params.get('page'))
+    if (id === null || !Number.isInteger(page) || page < 1) { setError(t('jumpUnavailable')); return true }
+    if (id === book.id) {
+      const anchor = currentPdfAnchor()
+      onJump({ kind: 'pdf', page, total: anchor?.total ?? page, offset: 0 })
+    } else {
+      window.open(`/api/bookshelf/standalone?book=${encodeURIComponent(id)}&page=${page}`, '_blank', 'noopener')
+    }
+    return true
+  }
+
   const createNote = async () => {
     if (busy || !(await flush())) return
     setBusy(true)
@@ -367,6 +418,12 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
             </div>
           </details>
           <div className="bs-note-actions">
+            {selected !== null && currentPdfAnchor() !== null && (
+              <button type="button" className="bs-note-action" onClick={() => { const anchor = currentPdfAnchor(); if (anchor !== null) insertReference(book.id, book.title, anchor.page) }} disabled={busy}>{t('insertCurrentPage')}</button>
+            )}
+            {selected !== null && (
+              <button type="button" className="bs-note-action" onClick={() => { void openReferenceDialog() }} disabled={busy}>{t('insertPdfReference')}</button>
+            )}
             {selected !== null && (
               <button type="button" className="bs-note-action" onClick={() => setPreview((current) => !current)} disabled={busy}>{preview ? t('editNote') : t('previewNote')}</button>
             )}
@@ -409,8 +466,8 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
             <article className="bs-note-document">
               <input className="bs-note-title-input" value={title} onChange={(event) => { setTitle(event.target.value); changed() }} placeholder={t('noteTitle')} aria-label={t('noteTitle')} />
               {preview
-                ? <div ref={previewRef} className="bs-note-preview bs-markdown" dangerouslySetInnerHTML={{ __html: previewHtml }} />
-                : <textarea className="bs-note-textarea" value={markdown} onChange={(event) => { setMarkdown(event.target.value); changed() }} placeholder={t('notePlaceholder')} aria-label={t('notePlaceholder')} />}
+                ? <div ref={previewRef} className="bs-note-preview bs-markdown" onClick={(event) => { const link = (event.target as Element).closest('a'); if (link !== null && jumpToReference(link.getAttribute('href') ?? '')) event.preventDefault() }} dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                : <textarea ref={textareaRef} className="bs-note-textarea" value={markdown} onChange={(event) => { setMarkdown(event.target.value); changed() }} placeholder={t('notePlaceholder')} aria-label={t('notePlaceholder')} />}
             </article>
           )}
         </div>
@@ -503,6 +560,25 @@ export function NoteSidebar({ book, api, t, context, screenshot, onClearScreensh
           </div>
         </div>
       </section>
+      {referenceOpen && (
+        <div className="bs-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setReferenceOpen(false) }}>
+          <section className="bs-modal bs-confirm" role="dialog" aria-modal="true" aria-label={t('insertPdfReference')}>
+            <header className="bs-modal-header"><h2>{t('insertPdfReference')}</h2></header>
+            <div className="bs-detail-body">
+              <label>{t('book')}
+                <select value={referenceBookId} onChange={(event) => setReferenceBookId(event.target.value)}>
+                  {referenceBooks.map((entry) => <option key={entry.id} value={entry.id}>{entry.title}</option>)}
+                </select>
+              </label>
+              <label>{t('page')}<input type="number" min={1} value={referencePage} onChange={(event) => setReferencePage(event.target.value)} /></label>
+            </div>
+            <footer className="bs-modal-footer"><div className="bs-actions">
+              <button type="button" className="bs-button" onClick={() => setReferenceOpen(false)}>{t('cancel')}</button>
+              <button type="button" className="bs-button bs-button-primary" onClick={() => { const target = referenceBooks.find((entry) => entry.id === referenceBookId); if (target !== undefined) { insertReference(target.id, target.title, Number(referencePage)); setReferenceOpen(false) } }} disabled={referenceBookId === ''}>{t('insert')}</button>
+            </div></footer>
+          </section>
+        </div>
+      )}
     </aside>
   )
 }

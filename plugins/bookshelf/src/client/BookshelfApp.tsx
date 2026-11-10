@@ -13,6 +13,7 @@ interface BookshelfAppProps {
   readonly t: Translate
   readonly api: BookshelfApi
   readonly initialBookId?: string
+  readonly initialPage?: number
 }
 
 const SHELF_PAGE_SIZE = 12
@@ -61,7 +62,7 @@ function sortBooks(books: readonly BookView[]): BookView[] {
   })
 }
 
-export function BookshelfApp({ t, api, initialBookId }: BookshelfAppProps) {
+export function BookshelfApp({ t, api, initialBookId, initialPage }: BookshelfAppProps) {
   const [books, setBooks] = useState<BookView[]>([])
   const [libraryPath, setLibraryPath] = useState<string>('')
   const [loading, setLoading] = useState(true)
@@ -287,6 +288,7 @@ export function BookshelfApp({ t, api, initialBookId }: BookshelfAppProps) {
       <div className="bs-app">
         <Reader
           book={openBookRecord}
+          initialPage={initialPage}
           api={api}
           t={t}
           onClose={() => setReaderId(null)}

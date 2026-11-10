@@ -28,6 +28,7 @@ function readSidebarPreference(): { open: boolean; width: number } {
 
 interface ReaderProps {
   readonly book: BookView
+  readonly initialPage?: number
   readonly api: BookshelfApi
   readonly t: Translate
   readonly onClose: () => void
@@ -125,7 +126,7 @@ function progressText(book: BookView, t: Translate): string {
   return t('notStarted')
 }
 
-export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProps) {
+export function Reader({ book, api, t, onClose, onSaved, onSetRead, initialPage }: ReaderProps) {
   const saver = useProgressSaver(book.id, api, onSaved)
   const [readBusy, setReadBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -260,7 +261,7 @@ export function Reader({ book, api, t, onClose, onSaved, onSetRead }: ReaderProp
             {book.format === 'pdf' && (
               <PdfReader
                 book={book}
-                initialPosition={book.progress.position?.kind === 'pdf' ? book.progress.position : null}
+                initialPosition={book.progress.position?.kind === 'pdf' ? (initialPage === undefined ? book.progress.position : { ...book.progress.position, page: initialPage }) : initialPage === undefined ? null : { kind: 'pdf', page: initialPage, total: 0, offset: 0 }}
                 initialWidth={book.readerWidth}
                 onWidthChange={onWidthChange}
                 fetchBytes={api.fileBytes}

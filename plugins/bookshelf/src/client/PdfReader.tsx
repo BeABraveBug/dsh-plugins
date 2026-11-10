@@ -20,6 +20,70 @@ interface PdfReaderProps {
   readonly t: Translate
 }
 
+interface OutlineEntry {
+  readonly title: string
+  readonly page: number
+  readonly children: readonly OutlineEntry[]
+}
+
+async function resolveOutline(doc: PDFDocumentProxy, items: readonly unknown[], depth = 0): Promise<OutlineEntry[]> {
+  const result: OutlineEntry[] = []
+  for (const raw of items) {
+    const item = raw as { title?: unknown; dest?: unknown; items?: readonly unknown[] }
+    if (typeof item.title !== 'string') continue
+    let page = 0
+    try {
+      const dest = typeof item.dest === 'string' ? await doc.getDestination(item.dest) : item.dest
+      if (Array.isArray(dest) && dest.length > 0) page = (await doc.getPageIndex(dest[0] as never)) + 1
+    } catch { page = 0 }
+    const children = Array.isArray(item.items) && depth < 8 ? await resolveOutline(doc, item.items, depth + 1) : []
+    if (page > 0 || children.length > 0) result.push({ title: item.title, page, children })
+  }
+  return result
+}
+
+function OutlineTree({ entries, current, onOpen }: { readonly entries: readonly OutlineEntry[]; readonly current: number; readonly onOpen: (page: number) => void }) {
+  return <ul className="bs-pdf-outline">{entries.map((entry, index) => <li key={`${entry.title}-${index}`}>
+    {entry.children.length > 0
+      ? <details open={entry.page === current || undefined}><summary>{entry.title}</summary><OutlineTree entries={entry.children} current={current} onOpen={onOpen} /></details>
+      : <button type="button" className={entry.page === current ? 'is-current' : ''} onClick={() => { if (entry.page > 0) onOpen(entry.page) }}>{entry.title}</button>}
+  </li>)}</ul>
+}
+
+function PdfThumbnail({ doc, page, current, onOpen, label }: { readonly doc: PDFDocumentProxy; readonly page: number; readonly current: boolean; readonly onOpen: (page: number) => void; readonly label: string }) {
+  const ref = useRef<HTMLCanvasElement>(null)
+  const [failed, setFailed] = useState(false)
+  useEffect(() => {
+    const canvas = ref.current
+    if (canvas === null) return
+    let cancelled = false
+    let task: RenderTask | null = null
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return
+      observer.disconnect()
+      void (async () => {
+        try {
+          const pdfPage = await doc.getPage(page)
+          if (cancelled) return
+          const viewport = pdfPage.getViewport({ scale: 0.22 })
+          const context = canvas.getContext('2d')
+          if (context === null) return
+          canvas.width = Math.max(1, Math.floor(viewport.width))
+          canvas.height = Math.max(1, Math.floor(viewport.height))
+          task = pdfPage.render({ canvas, viewport })
+          await task.promise
+        } catch { if (!cancelled) setFailed(true) }
+      })()
+    }, { rootMargin: '120px' })
+    observer.observe(canvas)
+    return () => { cancelled = true; observer.disconnect(); task?.cancel() }
+  }, [doc, page])
+  return <button type="button" className={`bs-pdf-thumb ${current ? 'is-current' : ''}`} onClick={() => onOpen(page)} aria-label={`${label} ${page}`}>
+    {failed ? <span className="bs-pdf-thumb-fallback">{page}</span> : <canvas ref={ref} />}
+    <span>{page}</span>
+  </button>
+}
+
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
@@ -44,6 +108,8 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
   const textLayerRef = useRef<HTMLDivElement>(null)
   const textLayerTaskRef = useRef<{ cancel?: () => void } | null>(null)
   const docRef = useRef<PDFDocumentProxy | null>(null)
+  const [navOpen, setNavOpen] = useState(false)
+  const [outline, setOutline] = useState<readonly OutlineEntry[] | null>(null)
   const renderTaskRef = useRef<RenderTask | null>(null)
   const initialRef = useRef(initialPosition)
   const restoreRef = useRef(initialPosition?.offset ?? 0)
@@ -103,6 +169,10 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
           return
         }
         docRef.current = doc
+        try {
+          const rawOutline = await doc.getOutline()
+          setOutline(rawOutline === null || rawOutline.length === 0 ? null : await resolveOutline(doc, rawOutline))
+        } catch { setOutline(null) }
         setTotal(doc.numPages)
         totalRef.current = doc.numPages
         setPage((current) => clampPage(initialRef.current?.page ?? current, doc.numPages))
@@ -377,6 +447,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
         </form>
         <button type="button" className="bs-icon-button" onClick={() => goTo(page + 1)}
             onWheel={forwardWheel} disabled={page >= total} aria-label={t('nextPage')}><ChevronRightIcon size={16} /></button>
+        <button type="button" className={`bs-button ${navOpen ? 'bs-button-primary' : ''}`} onClick={() => setNavOpen((current) => !current)}>{t('contents')}</button>
         <span className="bs-toolbar-spacer" />
         <button type="button" className="bs-button" onClick={() => changeZoom(zoom - 0.1)} aria-label={t('zoomOut')}>−</button>
         <span className="bs-zoom-label">{Math.round(zoom * 100)}%</span>
@@ -385,7 +456,11 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
         <button type="button" className="bs-button" onClick={captureRegion}>{t('captureRegion')}</button>
         {rendering && <span className="bs-muted">{t('loading')}</span>}
       </div>
-      <div className="bs-pdf-viewport">
+      <div className="bs-pdf-layout">
+        {navOpen && <aside className="bs-pdf-nav" aria-label={t('contents')}>
+          {outline !== null ? <OutlineTree entries={outline} current={page} onOpen={goTo} /> : <div className="bs-pdf-thumbs">{Array.from({ length: total }, (_, index) => index + 1).map((number) => <PdfThumbnail key={number} doc={docRef.current as PDFDocumentProxy} page={number} current={number === page} onOpen={goTo} label={t('page')} />)}</div>}
+        </aside>}
+        <div className="bs-pdf-viewport">
         <div ref={scrollRef} className="bs-pdf-scroll" onScroll={handleScroll}>
           <div className="bs-pdf-canvas-wrap">
             <canvas ref={canvasRef} className="bs-pdf-canvas" />
@@ -412,6 +487,7 @@ export function PdfReader({ book, initialPosition, initialWidth, onWidthChange, 
             aria-label={t('nextPage')}
           ><ChevronRightIcon size={22} /></button>
         )}
+      </div>
       </div>
       {capture !== null && (
         <div className="bs-capture-overlay" role="dialog" aria-label={t('capturePreview')}>
