@@ -55,7 +55,15 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
   const textChunks = useMemo(() => {
     if (text === null || book.format === 'markdown') return []
     const chunks: string[] = []
-    for (let start = 0; start < text.length; start += 32000) chunks.push(text.slice(start, start + 32000))
+    let current = ''
+    for (const line of text.match(/[^\n]*\n|[^\n]+$/g) ?? [text]) {
+      if (current !== '' && current.length + line.length > 32000) {
+        chunks.push(current)
+        current = ''
+      }
+      current += line
+    }
+    if (current !== '') chunks.push(current)
     return chunks
   }, [book.format, text])
 
@@ -66,7 +74,9 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
   useEffect(() => {
     if (text === null) return
     setPreparing(true)
-    const frame = requestAnimationFrame(() => setPreparing(false))
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setPreparing(false))
+    })
     return () => cancelAnimationFrame(frame)
   }, [text])
 

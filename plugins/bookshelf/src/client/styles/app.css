@@ -654,7 +654,7 @@
 
 .bs-text-scroll { height: 100%; min-height: 0; overflow: auto; padding: 24px clamp(20px, 6vw, 72px) 64px; }
 .bs-plain-text { position: relative; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--dsw-alias-label-primary); font-family: var(--dsw-alias-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: 13px; line-height: 1.7; }
-.bs-text-chunk { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; content-visibility: auto; contain-intrinsic-size: auto 1200px; }
+.bs-text-chunk { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit;  }
 .bs-text-preparing { position: sticky; top: 0; z-index: 2; width: fit-content; margin: 0 auto 8px; padding: 4px 10px; border-radius: 6px; background: var(--dsw-alias-bg-layer-2); color: var(--dsw-alias-label-secondary); font-size: 12px; }
 
 .bs-markdown { max-width: 860px; margin: 0 auto; color: var(--dsw-alias-label-primary); font-size: 14px; line-height: 1.75; }
