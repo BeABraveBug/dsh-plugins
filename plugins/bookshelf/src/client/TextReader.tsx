@@ -36,6 +36,7 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
 
   useEffect(() => {
     let cancelled = false
+    let frame: number | undefined
     restoredRef.current = false
     setText(null)
     setError(null)
@@ -45,14 +46,19 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
         const content = await fetchText(book.id)
         if (!cancelled) {
           setPreparing(true)
-          // Let the loading state commit and paint before mounting the full body.
-          requestAnimationFrame(() => { if (!cancelled) setText(content) })
+          // Give the preparing state two paints before mounting the full body.
+          frame = requestAnimationFrame(() => {
+            frame = requestAnimationFrame(() => { if (!cancelled) setText(content) })
+          })
         }
       } catch (cause: unknown) {
         if (!cancelled) setError(messageOf(cause))
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      if (frame !== undefined) cancelAnimationFrame(frame)
+    }
   }, [book.id, fetchText, reloadToken])
 
   const html = useMemo(() => (book.format === 'markdown' && text !== null ? renderMarkdown(text) : null), [book.format, text])
@@ -135,7 +141,7 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
   if (error !== null) {
     return <div className="bs-reader-error" role="alert"><p>{t('readerFailed')}</p><p className="bs-muted">{error}</p><button type="button" className="bs-button" onClick={() => setReloadToken((value) => value + 1)}>{t('retry')}</button></div>
   }
-  if (text === null) return <div className="bs-empty">{t('readingFile')}</div>
+  if (text === null) return <div className="bs-empty" role="status">{t(preparing ? 'preparingText' : 'readingFile')}</div>
   if (text.trim() === '') return <div className="bs-empty">{t('readerEmpty')}</div>
 
   return (
