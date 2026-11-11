@@ -11,7 +11,7 @@ function Quotes({ message }: { message: IndependentMessage }) {
     <ul className="side-chat-pane__quotes">
       {message.quotes.map(quote => (
         <li key={quote.id} className="side-chat-pane__quote">
-          <span className="side-chat-pane__quote-label">引用</span>
+          <span className="side-chat-pane__quote-label">{'引用'}</span>
           <span className="side-chat-pane__quote-text" title={quote.text}>{quote.text.slice(0, 160)}{quote.text.length > 160 ? '…' : ''}</span>
         </li>
       ))}
@@ -140,6 +140,18 @@ export function IndependentPane({ sessionId, t, sessions, api }: {
             <div className="side-chat-pane__actions" role="menu">
               <button type="button" role="menuitem" className="side-chat-pane__menu-item" onClick={() => { void api.setStatus(chat.id, 'saved'); setActionsOpen(false) }}>{t('panel.close')}</button>
               <button type="button" role="menuitem" className="side-chat-pane__menu-item" onClick={() => { void chats.archive(); setActionsOpen(false) }}>{t('panel.archive')}</button>
+              <button
+                type="button"
+                role="menuitem"
+                className="side-chat-pane__menu-item side-chat-pane__danger"
+                onClick={() => {
+                  if (!window.confirm(t('panel.deletePermanentHint'))) return
+                  setActionsOpen(false)
+                  void api.delete(chat.id)
+                }}
+              >
+                {t('panel.deletePermanent')}
+              </button>
             </div>
           ) : null}
 
@@ -192,6 +204,9 @@ export function IndependentPane({ sessionId, t, sessions, api }: {
                       }}
                     >
                       <option value="">{t('panel.modelDefault')}</option>
+                      {currentModel !== undefined && !(chats.models?.models ?? []).some(item => item.provider === currentModel.provider && item.model === currentModel.model) ? (
+                        <option value={`${currentModel.provider}/${currentModel.model}`}>{currentModel.model}</option>
+                      ) : null}
                       {(chats.models?.models ?? []).map(item => (
                         <option key={`${item.provider}/${item.model}`} value={`${item.provider}/${item.model}`}>{item.name}</option>
                       ))}
