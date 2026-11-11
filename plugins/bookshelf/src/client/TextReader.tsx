@@ -31,12 +31,15 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
   const restoredRef = useRef(false)
   const [text, setText] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [preparing, setPreparing] = useState(false)
+  const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     restoredRef.current = false
     setText(null)
     setError(null)
+    setPreparing(false)
     void (async () => {
       try {
         const content = await fetchText(book.id)
@@ -46,13 +49,26 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
       }
     })()
     return () => { cancelled = true }
-  }, [book.id, fetchText])
+  }, [book.id, fetchText, reloadToken])
 
   const html = useMemo(() => (book.format === 'markdown' && text !== null ? renderMarkdown(text) : null), [book.format, text])
+  const textChunks = useMemo(() => {
+    if (text === null || book.format === 'markdown') return []
+    const chunks: string[] = []
+    for (let start = 0; start < text.length; start += 32000) chunks.push(text.slice(start, start + 32000))
+    return chunks
+  }, [book.format, text])
 
   useEffect(() => {
     if (html !== null) void renderMermaid(articleRef.current)
   }, [html])
+
+  useEffect(() => {
+    if (text === null) return
+    setPreparing(true)
+    const frame = requestAnimationFrame(() => setPreparing(false))
+    return () => cancelAnimationFrame(frame)
+  }, [text])
 
   useEffect(() => {
     if (text === null || restoredRef.current) return
@@ -105,16 +121,17 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
   }
 
   if (error !== null) {
-    return <div className="bs-reader-error" role="alert"><p>{t('readerFailed')}</p><p className="bs-muted">{error}</p></div>
+    return <div className="bs-reader-error" role="alert"><p>{t('readerFailed')}</p><p className="bs-muted">{error}</p><button type="button" className="bs-button" onClick={() => setReloadToken((value) => value + 1)}>{t('retry')}</button></div>
   }
-  if (text === null) return <div className="bs-empty">{t('readerLoading')}</div>
+  if (text === null) return <div className="bs-empty">{t('readingFile')}</div>
   if (text.trim() === '') return <div className="bs-empty">{t('readerEmpty')}</div>
 
   return (
     <div ref={scrollRef} className="bs-text-scroll" onScroll={handleScroll} onMouseUp={handleSelection}>
       {html !== null
         ? <article ref={articleRef} className="bs-markdown" dangerouslySetInnerHTML={{ __html: html }} />
-        : <pre className="bs-plain-text">{text}</pre>}
+        : <div className="bs-plain-text">{textChunks.map((chunk, index) => <pre key={index} className="bs-text-chunk">{chunk}</pre>)}</div>}
+      {preparing && <div className="bs-text-preparing" role="status">{t('preparingText')}</div>}
     </div>
   )
 }
