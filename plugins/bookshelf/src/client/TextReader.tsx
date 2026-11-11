@@ -45,7 +45,8 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
         const content = await fetchText(book.id)
         if (!cancelled) {
           setPreparing(true)
-          setText(content)
+          // Let the loading state commit and paint before mounting the full body.
+          requestAnimationFrame(() => { if (!cancelled) setText(content) })
         }
       } catch (cause: unknown) {
         if (!cancelled) setError(messageOf(cause))
