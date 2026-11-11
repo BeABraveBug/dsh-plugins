@@ -86,12 +86,20 @@ export function useIndependentChats(api: IndependentApi, parentId: string, sessi
     try {
       let background: { text: string; fromSeq?: number; toSeq?: number } | undefined
       if (!view.chat.firstSendDone && view.chat.pendingQuotes.length === 0) {
-        try {
-          const snapshot = await buildParentBackground(sessions, parentId)
-          if (snapshot.text !== '') background = snapshot
-        } catch (cause) {
-          setError(cause instanceof Error ? cause.message : String(cause))
-          return
+        if (view.chat.backgroundText !== undefined && view.chat.backgroundText !== '') {
+          background = {
+            text: view.chat.backgroundText,
+            ...(view.chat.backgroundFromSeq === undefined ? {} : { fromSeq: view.chat.backgroundFromSeq }),
+            ...(view.chat.backgroundToSeq === undefined ? {} : { toSeq: view.chat.backgroundToSeq }),
+          }
+        } else {
+          try {
+            const snapshot = await buildParentBackground(sessions, parentId)
+            if (snapshot.text !== '') background = snapshot
+          } catch (cause) {
+            setError(cause instanceof Error ? cause.message : String(cause))
+            return
+          }
         }
       }
       const requestId = `side-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`

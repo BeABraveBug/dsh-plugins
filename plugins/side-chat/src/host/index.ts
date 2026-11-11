@@ -1,9 +1,8 @@
 import { mkdirSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import { registerRoutes } from './routes.ts'
 import { registerIndependentRoutes } from './independent-routes.ts'
-import { SideChatStore, defaultStorePath } from './store.ts'
+import { defaultStorePath } from './paths.ts'
 import { IndependentStore } from './independent-store.ts'
 import { IndependentService } from './independent-service.ts'
 
@@ -15,16 +14,11 @@ interface HostContext {
   get(name: string): unknown
 }
 
-/**
- * Host half of the plugin. Independent SQLite sessions are authoritative; the
- * legacy JSON record is only kept for the old client while it is being replaced.
- */
+/** Host half: SQLite-backed independent side chats plus the model gateway. */
 export function apply(ctx: HostContext): void {
-  const legacyPath = defaultStorePath()
-  const dataDir = dirname(legacyPath)
+  const dataDir = dirname(defaultStorePath())
   mkdirSync(dataDir, { recursive: true })
-  void rm(legacyPath, { force: true }).catch(() => undefined)
-  registerRoutes(ctx, new SideChatStore(legacyPath))
+  void rm(defaultStorePath(), { force: true }).catch(() => undefined)
 
   ctx.inject(['llm', 'agentDefaultModel'], (scope: any) => {
     const store = new IndependentStore(join(dataDir, 'sessions.sqlite'))

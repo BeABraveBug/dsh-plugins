@@ -52,9 +52,9 @@ describe('host entry', () => {
       effect: (run) => run(),
       get: () => undefined,
     })).toBeUndefined()
-    expect(injected).toEqual(['connection', 'llm', 'agentDefaultModel', 'connection'])
-    expect(routes.map(route => route.path).sort()).toEqual(['/api/side-chat/independent', '/api/side-chat/rpc'])
-    for (const route of routes) expect(route.methods).toEqual(['POST'])
+    expect(injected).toEqual(['llm', 'agentDefaultModel', 'connection'])
+    expect(routes.map(route => route.path)).toEqual(['/api/side-chat/independent'])
+    expect(routes[0].methods).toEqual(['POST'])
   })
 })
 
