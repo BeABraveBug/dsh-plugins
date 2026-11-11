@@ -43,7 +43,10 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
     void (async () => {
       try {
         const content = await fetchText(book.id)
-        if (!cancelled) setText(content)
+        if (!cancelled) {
+          setPreparing(true)
+          setText(content)
+        }
       } catch (cause: unknown) {
         if (!cancelled) setError(messageOf(cause))
       }
@@ -73,11 +76,9 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
 
   useEffect(() => {
     if (text === null) return
-    setPreparing(true)
-    const frame = requestAnimationFrame(() => {
-      requestAnimationFrame(() => setPreparing(false))
-    })
-    return () => cancelAnimationFrame(frame)
+    if (!preparing) return
+    const timer = setTimeout(() => setPreparing(false), 150)
+    return () => clearTimeout(timer)
   }, [text])
 
   useEffect(() => {
@@ -137,11 +138,13 @@ export function TextReader({ book, initialPosition, fetchText, onProgress, onCon
   if (text.trim() === '') return <div className="bs-empty">{t('readerEmpty')}</div>
 
   return (
+    <div className="bs-text-reader">
     <div ref={scrollRef} className="bs-text-scroll" onScroll={handleScroll} onMouseUp={handleSelection}>
       {html !== null
         ? <article ref={articleRef} className="bs-markdown" dangerouslySetInnerHTML={{ __html: html }} />
         : <div className="bs-plain-text">{textChunks.map((chunk, index) => <pre key={index} className="bs-text-chunk">{chunk}</pre>)}</div>}
-      {preparing && <div className="bs-text-preparing" role="status">{t('preparingText')}</div>}
+    </div>
+    {preparing && <div className="bs-text-preparing" role="status">{t('preparingText')}</div>}
     </div>
   )
 }
