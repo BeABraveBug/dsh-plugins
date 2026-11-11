@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { SideChatHub } from './hub.ts'
+import type { IndependentApi } from './independent-api.ts'
 import type { Observable } from './host-api.ts'
 import type { Translate } from './i18n.ts'
 import { isQuotableNodeKey } from './selection.ts'
@@ -14,7 +14,7 @@ interface Candidate {
 
 interface SelectionQuoteLayerProps {
   readonly t: Translate
-  readonly hub: SideChatHub
+  readonly api: IndependentApi
   readonly mounted: Observable<string | undefined>
   readonly openSideChat: () => void
 }
@@ -31,7 +31,7 @@ function elementOf(node: Node | null): Element | null {
  * action: add it as a pending quote to the Parent's active side chat. Nothing is
  * sent and no real Session is created here.
  */
-export function SelectionQuoteLayer({ t, hub, mounted, openSideChat }: SelectionQuoteLayerProps) {
+export function SelectionQuoteLayer({ t, api, mounted, openSideChat }: SelectionQuoteLayerProps) {
   const [parentId, setParentId] = useState<string | undefined>(() => mounted.getSnapshot())
   const [candidate, setCandidate] = useState<Candidate | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -110,21 +110,23 @@ export function SelectionQuoteLayer({ t, hub, mounted, openSideChat }: Selection
   if (candidate === null) return null
 
   const addQuote = (): void => {
-    const result = hub.deliverQuote(candidate.parentId, {
+    const quote = {
+      id: `quote-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
       text: candidate.text,
       sourceSessionId: candidate.parentId,
       ...(candidate.sourceNodeKey === undefined ? {} : { sourceNodeKey: candidate.sourceNodeKey }),
+      createdAt: Date.now(),
+    }
+    void api.addQuoteToActive(candidate.parentId, quote).then(() => {
+      try {
+        openSideChat()
+      } catch {
+        // The panel may be unavailable while the layout is disposing; the quote is kept.
+      }
+      setCandidate(null)
+    }).catch((cause: { code?: string }) => {
+      setNotice(cause.code === 'side-chat/quote-too-many' ? t('quote.tooMany') : cause.code === 'side-chat/quote-too-long' ? t('quote.tooLong') : null)
     })
-    if (!result.ok) {
-      setNotice(result.code === 'too-many' ? t('quote.tooMany') : result.code === 'too-long' ? t('quote.tooLong') : null)
-      return
-    }
-    try {
-      openSideChat()
-    } catch {
-      // The panel may be unavailable while the layout is disposing; the quote is kept.
-    }
-    setCandidate(null)
   }
 
   return (

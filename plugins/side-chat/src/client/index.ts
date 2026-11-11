@@ -1,11 +1,10 @@
-import { createSideChatApi } from './api.ts'
-import { SideChatHub } from './hub.ts'
+import { IndependentApi } from './independent-api.ts'
 import { DICT_EN, DICT_ZH, NAMESPACE } from './i18n.ts'
 import { OpenSideChatButton } from './OpenSideChatButton.tsx'
 import { SelectionQuoteLayer } from './SelectionQuoteLayer.tsx'
 import type { Translate } from './i18n.ts'
 import type { SessionsServiceLike, UiSessionServiceLike, WorkspacesServiceLike } from './host-api.ts'
-import { SideChatPane } from './SideChatPane.tsx'
+import { IndependentPane } from './IndependentPane.tsx'
 import './styles/panel.css'
 
 export const name = 'side-chat'
@@ -56,20 +55,15 @@ interface ClientContext {
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NAMESPACE, { zh: DICT_ZH, en: DICT_EN }), 'side-chat: dictionaries')
   const t = ctx.locale.bind(NAMESPACE)
-  const api = createSideChatApi()
-  let counter = 0
-  const hub = new SideChatHub({
-    createId: () => `chat-${Date.now().toString(36)}-${(counter += 1)}`,
-    now: () => Date.now(),
-  })
+  const api = new IndependentApi()
 
   ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register(
     {
       name: 'sidebar.right.pane.tab',
       key: TAB_ID,
-      inject: (sessionId: string) => ({ sessionId, t, sessions: ctx.sessions, workspaces: ctx.workspaces, uiSession: ctx.uiSession, api, hub }),
+      inject: (sessionId: string) => ({ sessionId, t, sessions: ctx.sessions, api }),
     },
-    SideChatPane,
+    IndependentPane,
   ))
 
   ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register(
@@ -99,7 +93,7 @@ export function apply(ctx: ClientContext): void {
       locale: NAMESPACE,
       inject: () => ({
         t,
-        hub,
+        api,
         mounted: ctx.sidebarRight.mounted,
         openSideChat: () => {
           try {
