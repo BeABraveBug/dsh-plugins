@@ -8,12 +8,12 @@
 
 需要 Node.js `^22.19.0 || >=24.0.0`，以及 DSH `>=0.2.1-rc.2 <0.3.0`。已验证的宿主版本为 `0.2.1-rc.5`，浏览器环境为 Chromium；其他 DSH 版本、Windows 和远程部署尚未逐一验证。
 
-包名为 `dsh-bookshelf`。在准备安装的那份检出根目录执行下列命令。测试开发分支时，使用原项目下的 `.worktree/bookshelf/`。
+包名为 `dsh-bookshelf`。在准备安装的那份检出中进入 `plugins/bookshelf/`，按 `package.json` 的 `packageManager` 使用 pnpm。测试开发分支时，使用原项目下的 `.worktree/bookshelf/`。
 
 ```sh
-pnpm install
-pnpm --filter dsh-bookshelf build
-dsh plugin --profile web add "$PWD/plugins/bookshelf"
+pnpm install --frozen-lockfile
+pnpm run build
+dsh plugin --profile web add "$PWD"
 ```
 
 将 `web` 替换为实际使用的 profile。`lib/` 不随源码保存，新 checkout 和源码更新后需要构建，再按宿主方式重新加载插件。升级、卸载及其他安装方式见原项目根目录的 `docs/installation.md`。

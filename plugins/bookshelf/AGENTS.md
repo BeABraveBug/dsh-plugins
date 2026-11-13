@@ -32,13 +32,13 @@ bookshelf/
 
 ## 开发命令
 
-在原项目的 `.worktree/bookshelf/` 根目录运行下列命令。开发分支和提交步骤见原项目根目录的 `docs/versioning-and-releases.md`。
+在原项目的 `.worktree/bookshelf/plugins/bookshelf/` 中运行下列命令。按本插件的 `packageManager` 使用 pnpm，依赖版本以本目录的 `pnpm-lock.yaml` 为准。开发分支和提交步骤见原项目根目录的 `docs/versioning-and-releases.md`。
 
 ```sh
-pnpm install
-pnpm --filter dsh-bookshelf typecheck
-pnpm --filter dsh-bookshelf test
-pnpm --filter dsh-bookshelf build
+pnpm install --frozen-lockfile
+pnpm run typecheck
+pnpm run test
+pnpm run build
 ```
 
 `lib/` 是构建产物。安装到 DSH profile 前先执行 build。

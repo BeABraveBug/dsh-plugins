@@ -77,5 +77,6 @@
     "test": "vitest run",
     "check": "pnpm run typecheck && pnpm run test && pnpm run build && node tests/client-bundle-smoke.mjs"
   },
-  "icon": "icon.svg"
+  "icon": "icon.svg",
+  "packageManager": "pnpm@11.24.0"
 }
