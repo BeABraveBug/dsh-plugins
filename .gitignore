@@ -28,3 +28,6 @@ plugins/*/docs/references/
 
 # Package archives
 *.tgz
+
+# Local plugin worktrees
+/.worktree/
