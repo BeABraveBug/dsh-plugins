@@ -57,9 +57,13 @@ dsh plugin --profile my-profile add "$PWD"
 
 `--from-default-profile` 会用随附模板替换目标 profile；上面的命令用于新建 profile，已有自定义配置的 profile 不要用它重建。
 
-`dsh plugin` 首次使用时会初始化 profile，并按需把插件加入 `dsh.profile.bundles`。不要把插件装到 DSH 的全局安装目录，也不要在插件目录中另建独立锁文件。
+`dsh plugin` 首次使用时会初始化 profile，并按需把插件加入 `dsh.profile.bundles`。将插件安装到选定的 profile。
 
 ## 验证安装
+
+1. 合并前，在 `.worktree/<插件名>/plugins/<插件名>/` 中验证开发分支。首次安装或依赖变化时执行 `pnpm install --frozen-lockfile`，然后运行 `pnpm run check`。
+2. 合入 `main` 或其他指定主分支后，如需复验合并结果，在原项目的 `plugins/<插件名>/` 中执行同样的检查。首次在这份检出中验证时，先安装依赖。
+3. 在 DSH 中验证时，从当前要测试的插件目录构建并链接安装。启动前核对测试 profile 中该插件的本地链接路径，确认它指向本次构建的目录。切换检出时重新链接，随后刷新或重启 DSH。
 
 不启动服务，先检查组合配置：
 
