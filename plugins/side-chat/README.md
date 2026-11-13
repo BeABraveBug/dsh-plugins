@@ -20,7 +20,7 @@ pnpm --filter dsh-side-chat build
 dsh plugin --profile web add "$PWD/plugins/side-chat"
 ```
 
-将 `web` 替换为实际使用的 profile。安装后可从右侧栏指南或会话头部按钮打开。升级、切换检出和验证安装见[安装与升级插件](../../docs/installation.md)。
+将 `web` 替换为实际使用的 profile。安装后可从右侧栏指南或会话头部按钮打开。升级、切换检出和验证安装见原项目根目录的 `docs/installation.md`。
 
 ## 使用
 
