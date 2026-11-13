@@ -7,6 +7,7 @@
 | 插件 | 目录 | 说明 |
 | --- | --- | --- |
 | 书架 | [`plugins/bookshelf`](plugins/bookshelf) | 管理和阅读本地 PDF、EPUB、TXT、Markdown，显示书籍封面，保留原文件位置与阅读进度。 |
+| 侧边对话 | [`plugins/side-chat`](plugins/side-chat) | 在 DSH 主会话旁进行独立文字侧聊，支持选文引用、会话恢复和归档。 |
 
 每个插件独立维护版本、文档、测试和发布产物。
 
