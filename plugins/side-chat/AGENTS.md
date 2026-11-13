@@ -49,6 +49,8 @@ side-chat/
 
 ## 开发命令
 
+在原项目的 `.worktree/side-chat/` 根目录运行下列命令。开发分支和提交步骤见[版本与发布](../../docs/versioning-and-releases.md)。
+
 ```sh
 pnpm install
 pnpm --filter dsh-side-chat typecheck

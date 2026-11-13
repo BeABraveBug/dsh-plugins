@@ -12,7 +12,7 @@ DSH 主会话旁的独立文字讨论区。每个侧聊由插件自己保存会�
 
 ## 安装
 
-需要 Node.js `^22.19.0 || >=24.0.0`，以及 DSH `>=0.2.1-rc.2 <0.3.0`。在本仓库根目录执行：
+需要 Node.js `^22.19.0 || >=24.0.0`，以及 DSH `>=0.2.1-rc.2 <0.3.0`。在准备安装的那份检出根目录执行下列命令。测试开发分支时，使用原项目下的 `.worktree/side-chat/`。
 
 ```sh
 pnpm install
@@ -20,7 +20,7 @@ pnpm --filter dsh-side-chat build
 dsh plugin --profile web add "$PWD/plugins/side-chat"
 ```
 
-将 `web` 替换为实际使用的 profile。安装后可从右侧栏指南或会话头部按钮打开。
+将 `web` 替换为实际使用的 profile。安装后可从右侧栏指南或会话头部按钮打开。升级、切换检出和验证安装见[安装与升级插件](../../docs/installation.md)。
 
 ## 使用
 
@@ -56,6 +56,8 @@ dsh plugin --profile web add "$PWD/plugins/side-chat"
 - 未接入逐字流式输出，回复完成后一次性显示。
 
 ## 开发命令
+
+在 `.worktree/side-chat/` 的根目录运行。
 
 ```sh
 pnpm --filter dsh-side-chat typecheck
