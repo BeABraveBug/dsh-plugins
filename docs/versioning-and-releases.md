@@ -26,11 +26,18 @@
 
 ```sh
 git worktree add -b feat/bookshelf-example .worktree/bookshelf main
-git -C .worktree/bookshelf sparse-checkout set --cone docs plugins/bookshelf
+git -C .worktree/bookshelf sparse-checkout set --no-cone --stdin <<'EOF'
+/*
+!/AGENTS.md
+!/README.md
+!/docs/
+!/plugins/*
+/plugins/bookshelf/
+EOF
 git -C .worktree/bookshelf status --short --branch
 ```
 
-检出保留仓库根文件、公共 `docs/` 和目标插件。插件依赖工作区公共包时，把所需目录加入稀疏检出。项目级角色规则在原项目的 `docs/` 维护。插件检出中的同名文件随分支版本变化，开始工作时以原项目的角色文档为准。
+插件检出保留仓库根配置和目标插件。为其他插件配置时，替换命令中的 worktree 路径、分支名和插件路径。插件依赖工作区公共包时，将所需目录加入稀疏检出。公共 `docs/`、根 `AGENTS.md` 和根 `README.md` 统一在原项目查阅与维护。调整已有 worktree 的稀疏范围前，先检查待排除路径中的未提交改动。
 
 ## 从插件 worktree 提交与合并
 
