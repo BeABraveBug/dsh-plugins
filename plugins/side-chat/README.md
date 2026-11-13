@@ -12,12 +12,12 @@ DSH 主会话旁的独立文字讨论区。每个侧聊由插件自己保存会�
 
 ## 安装
 
-需要 Node.js `^22.19.0 || >=24.0.0`，以及 DSH `>=0.2.1-rc.2 <0.3.0`。在准备安装的那份检出根目录执行下列命令。测试开发分支时，使用原项目下的 `.worktree/side-chat/`。
+需要 Node.js `^22.19.0 || >=24.0.0`，以及 DSH `>=0.2.1-rc.2 <0.3.0`。在准备安装的那份检出中进入 `plugins/side-chat/`，按 `package.json` 的 `packageManager` 使用 pnpm。测试开发分支时，使用原项目下的 `.worktree/side-chat/`。
 
 ```sh
-pnpm install
-pnpm --filter dsh-side-chat build
-dsh plugin --profile web add "$PWD/plugins/side-chat"
+pnpm install --frozen-lockfile
+pnpm run build
+dsh plugin --profile web add "$PWD"
 ```
 
 将 `web` 替换为实际使用的 profile。安装后可从右侧栏指南或会话头部按钮打开。升级、切换检出和验证安装见原项目根目录的 `docs/installation.md`。
@@ -57,13 +57,13 @@ dsh plugin --profile web add "$PWD/plugins/side-chat"
 
 ## 开发命令
 
-在 `.worktree/side-chat/` 的根目录运行。
+在 `.worktree/side-chat/plugins/side-chat/` 中运行。
 
 ```sh
-pnpm --filter dsh-side-chat typecheck
-pnpm --filter dsh-side-chat test
-pnpm --filter dsh-side-chat build
-pnpm --filter dsh-side-chat check
+pnpm run typecheck
+pnpm run test
+pnpm run build
+pnpm run check
 ```
 
 `lib/` 是构建产物，由 `.gitignore` 排除；安装或更新源码后先构建。

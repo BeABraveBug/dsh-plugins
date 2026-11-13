@@ -49,14 +49,14 @@ side-chat/
 
 ## 开发命令
 
-在原项目的 `.worktree/side-chat/` 根目录运行下列命令。开发分支和提交步骤见原项目根目录的 `docs/versioning-and-releases.md`。
+在原项目的 `.worktree/side-chat/plugins/side-chat/` 中运行下列命令。按本插件的 `packageManager` 使用 pnpm，依赖版本以本目录的 `pnpm-lock.yaml` 为准。开发分支和提交步骤见原项目根目录的 `docs/versioning-and-releases.md`。
 
 ```sh
-pnpm install
-pnpm --filter dsh-side-chat typecheck
-pnpm --filter dsh-side-chat test
-pnpm --filter dsh-side-chat build
-pnpm --filter dsh-side-chat check
+pnpm install --frozen-lockfile
+pnpm run typecheck
+pnpm run test
+pnpm run build
+pnpm run check
 ```
 
 ## 文档
