@@ -18,6 +18,20 @@
 
 日常开发可以多次提交和同步代码，准备提供新安装版本时再升级版本。仓库根 package.json 设为 private，不作为插件发布，也不要求设置一个驱动所有插件同步升级的总版本。
 
+## 创建或复用插件 worktree
+
+在原项目根目录运行 `git worktree list`。目标插件已有 worktree 时，核对其路径、分支和未提交改动后复用。`.worktree/` 由 Git 忽略，新克隆的仓库按需创建插件 worktree。
+
+以下命令从 `main` 创建 bookshelf 功能分支及检出。使用已有开发分支时，在 `git worktree add` 中省略 `-b`，将末尾的 `main` 替换为该分支名。已有分支须先在其他工作目录解除检出，未提交改动须先保留并按归属迁移。
+
+```sh
+git worktree add -b feat/bookshelf-example .worktree/bookshelf main
+git -C .worktree/bookshelf sparse-checkout set --cone docs plugins/bookshelf
+git -C .worktree/bookshelf status --short --branch
+```
+
+检出保留仓库根文件、公共 `docs/` 和目标插件。插件依赖工作区公共包时，把所需目录加入稀疏检出。项目级角色规则在原项目的 `docs/` 维护。插件检出中的同名文件随分支版本变化，开始工作时以原项目的角色文档为准。
+
 ## 从插件 worktree 提交与合并
 
 1. 确认目标插件、开发分支和本次指定的主分支。目标通常是 `main`，用户指定其他主分支时以指定分支为准。用 `git worktree list` 和 `git status --short --branch` 核对目录与分支的对应关系。

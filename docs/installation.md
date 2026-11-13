@@ -11,20 +11,20 @@
 
 ## 从 checkout 安装（开发/本地使用）
 
-在仓库根目录执行：
+先进入要构建和安装的那份检出的根目录。开发或复核插件时，使用原项目下的 `.worktree/<插件名>/`。安装指定主分支的版本时，使用检出该分支的原项目根目录。以下以 bookshelf 为例。
 
 ```sh
 pnpm install
-pnpm run build
+pnpm --filter dsh-bookshelf build
 ```
 
-`build` 会在各插件的 `lib/` 下生成发布入口；`lib/` 被 `.gitignore` 排除，所以新 checkout 必须先构建。然后安装到目标 profile：
+构建会在当前检出的 `plugins/bookshelf/lib/` 下生成入口。`lib/` 由 Git 忽略，新检出需要先构建。保持在同一目录，将插件安装到目标 profile。
 
 ```sh
 dsh plugin --profile web add "$PWD/plugins/bookshelf"
 ```
 
-这条命令把当前 checkout 以链接方式加入 profile 的 `package.json` 和 `dsh.profile.bundles`。链接安装不会自动执行构建，更新源码后需要重新执行 `pnpm run build`。
+链接安装将具体的插件路径写入 profile。更新源码后，在链接指向的检出中重新构建。切换到另一份检出时，使用其插件路径重新安装并核对 profile。并行测试请分别使用独立的 `DSH_HOME` 和服务端口。
 
 如果不想链接到源码目录，也可以先打包再安装：
 
@@ -91,9 +91,11 @@ bookshelf 的记录文件是 `$DSH_HOME/bookshelf/library.json`（默认 `~/.dsh
 
 ### 链接安装
 
+在 profile 当前链接的检出根目录执行。
+
 ```sh
 pnpm install
-pnpm run build
+pnpm --filter dsh-bookshelf build
 ```
 
 然后刷新已打开的 DSH 页面。profile 没有 HMR 或插件没有自动重载时，重启 `dsh web`。如果插件包版本发生变化，重新执行 `dsh plugin --profile web add "$PWD/plugins/bookshelf"` 让 profile 记录新的依赖。
@@ -107,7 +109,7 @@ dsh plugin --profile web remove dsh-bookshelf
 dsh plugin --profile web add "$PWD/dist/dsh-bookshelf-0.1.0.tgz"
 ```
 
-全新安装前确认 `lib/` 已由 `pnpm run build` 生成。不要直接覆盖 profile 的 `package.json` 或 `node_modules`。
+全新安装前确认 `lib/` 已由目标插件的构建命令生成。不要直接覆盖 profile 的 `package.json` 或 `node_modules`。
 
 ## 卸载
 
@@ -126,12 +128,12 @@ dsh plugin --profile web remove dsh-bookshelf
 
 | 现象 | 原因 | 处理 |
 | --- | --- | --- |
-| 启动提示找不到 `lib/index.js` 或 `lib/client.js` | checkout 未构建，或构建产物被清理 | 在仓库根目录执行 `pnpm run build`，确认插件 `lib/` 存在 |
+| 启动提示找不到 `lib/index.js` 或 `lib/client.js` | checkout 未构建，或构建产物被清理 | 在已链接的检出中构建目标插件，确认 `lib/` 存在 |
 | `dsh plugin add` 后页面没有入口 | profile 未重载或没有 HMR | 刷新页面；仍无入口时重启 `dsh web` |
 | 安装被拒绝，提示 DSH 版本不兼容 | 插件 `engines.dsh` 不匹配 | 升级/切换 DSH，或按插件文档确认支持的版本范围 |
 | 安装后数据为空 | 使用了不同的 `DSH_HOME`，或该数据目录尚未添加书籍 | 核对 `DSH_HOME` 与书架底部显示的记录路径；仅切换 profile 不会自动分库 |
 | `pnpm` 构建失败 | Node.js/pnpm 版本不满足，或依赖未安装 | 核对 README 的环境要求，执行 `pnpm install` 后重试 |
-| 插件升级后仍是旧代码 | 链接安装可直接复用源码，但未重新构建 | 执行 `pnpm run build`，再刷新或重启 |
+| 插件升级后仍是旧代码 | 链接安装可直接复用源码，但未重新构建 | 在已链接的检出中重新构建，再刷新或重启 |
 
 ## 数据与文件边界
 
