@@ -27,7 +27,7 @@ bookshelf/
 
 - Host 侧是书目和阅读状态的唯一写入者；Client 只通过 `ctx.connection` 上已认证的精确 Fetch 路由读写。
 - 插件只读取原文件，不复制、修改、移动或删除原文件。
-- 记录保存在 `$DSH_HOME/bookshelf/library.json`，不进入源码或发布产物。
+- 书目、笔记和问答消息分别保存在 `$DSH_HOME/bookshelf/` 下的 `library.json`、`notes.json` 和 `conversations.json`，不进入源码或发布产物。
 - Client 不直接访问 `ctx`；组件通过 `apply` 闭包提供的普通回调和数据工作。
 
 ## 开发命令
