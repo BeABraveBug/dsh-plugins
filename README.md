@@ -15,12 +15,11 @@
 完整说明见 [安装与升级插件](docs/installation.md)。从本地 checkout 安装 bookshelf 的最短路径：
 
 ```sh
-# 在仓库根目录
-pnpm install
+cd plugins/bookshelf
+pnpm install --frozen-lockfile
 pnpm run build
 
-# 安装到现有 web profile；<插件目录> 例如 plugins/bookshelf
-dsh plugin --profile web add "$PWD/plugins/bookshelf"
+dsh plugin --profile web add "$PWD"
 ```
 
 验证组合配置：
@@ -35,7 +34,7 @@ dsh --profile web --dump-config | grep -A2 'dsh-bookshelf'
 
 ```sh
 mkdir -p dist
-pnpm --filter dsh-bookshelf pack --pack-destination "$PWD/dist"
+pnpm pack --pack-destination "$PWD/dist"
 dsh plugin --profile web add "$PWD/dist/dsh-bookshelf-0.1.0.tgz"
 ```
 
@@ -49,6 +48,8 @@ dsh plugin --profile web remove dsh-bookshelf
 
 ## 开发命令
 
+先进入对应插件 worktree 下的插件目录，例如 `.worktree/bookshelf/plugins/bookshelf/`。
+
 ```sh
 pnpm run typecheck
 pnpm run test
@@ -56,7 +57,7 @@ pnpm run build
 pnpm run check
 ```
 
-各插件也维护自己的命令与验证范围，见对应 README。
+命令与验证范围以对应插件的 README 和 `package.json` 为准。
 
 ## License
 
