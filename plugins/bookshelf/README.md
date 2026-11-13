@@ -8,7 +8,7 @@
 
 需要 Node.js `^22.19.0 || >=24.0.0`，以及 DSH `>=0.2.1-rc.2 <0.3.0`。已验证的宿主版本为 `0.2.1-rc.5`，浏览器环境为 Chromium；其他 DSH 版本、Windows 和远程部署尚未逐一验证。
 
-包名为 `dsh-bookshelf`。在本仓库根目录执行：
+包名为 `dsh-bookshelf`。在准备安装的那份检出根目录执行下列命令。测试开发分支时，使用原项目下的 `.worktree/bookshelf/`。
 
 ```sh
 pnpm install
