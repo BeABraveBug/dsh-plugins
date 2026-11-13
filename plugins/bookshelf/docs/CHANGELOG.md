@@ -1,6 +1,6 @@
 # Changelog
 
-本文件记录 `dsh-bookshelf` 的用户可感知变化，遵循[书写规范](../../../docs/versioning-and-releases.md#changelog-书写规范)。发布日期使用北京时间。
+本文件记录 `dsh-bookshelf` 的用户可感知变化。发布日期使用北京时间。
 
 ## Unreleased
 

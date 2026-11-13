@@ -16,7 +16,7 @@ pnpm --filter dsh-bookshelf build
 dsh plugin --profile web add "$PWD/plugins/bookshelf"
 ```
 
-将 `web` 替换为实际使用的 profile。`lib/` 不随源码保存，新 checkout 和源码更新后需要构建，再按宿主方式重新加载插件。升级、卸载及其他安装方式见[安装与升级插件](../../docs/installation.md)。
+将 `web` 替换为实际使用的 profile。`lib/` 不随源码保存，新 checkout 和源码更新后需要构建，再按宿主方式重新加载插件。升级、卸载及其他安装方式见原项目根目录的 `docs/installation.md`。
 
 ## 使用
 

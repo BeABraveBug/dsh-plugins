@@ -32,7 +32,7 @@ bookshelf/
 
 ## 开发命令
 
-在原项目的 `.worktree/bookshelf/` 根目录运行下列命令。开发分支和提交步骤见[版本与发布](../../docs/versioning-and-releases.md)。
+在原项目的 `.worktree/bookshelf/` 根目录运行下列命令。开发分支和提交步骤见原项目根目录的 `docs/versioning-and-releases.md`。
 
 ```sh
 pnpm install
